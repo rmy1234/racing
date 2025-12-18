@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>🏎️ Racing Game</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <div id="app">
+    <!-- 로비 화면 -->
+    <div id="lobby" class="screen active">
+      <div class="lobby-container">
+        <h1 class="game-title">
+          <span class="title-icon">🏎️</span>
+          TURBO RACING
+        </h1>
+        
+        <div class="nickname-section">
+          <label for="nickname">닉네임</label>
+          <input type="text" id="nickname" placeholder="닉네임 입력..." maxlength="12">
+        </div>
+
+        <div class="lobby-actions">
+          <button id="createRoomBtn" class="btn btn-primary">
+            <span class="btn-icon">➕</span>
+            새 게임 만들기
+          </button>
+          <button id="refreshRoomsBtn" class="btn btn-secondary">
+            <span class="btn-icon">🔄</span>
+            새로고침
+          </button>
+        </div>
+
+        <div class="room-list-section">
+          <h2>게임 목록</h2>
+          <div id="roomList" class="room-list">
+            <div class="no-rooms">현재 열린 게임이 없습니다</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 방 대기실 -->
+    <div id="waitingRoom" class="screen">
+      <div class="waiting-container">
+        <div class="room-header">
+          <h2 id="roomTitle">게임 대기실</h2>
+          <span id="roomId" class="room-code"></span>
+        </div>
+
+        <div class="players-grid">
+          <h3>참가자</h3>
+          <div id="playersList" class="players-list"></div>
+        </div>
+
+        <div class="waiting-actions">
+          <button id="startGameBtn" class="btn btn-primary btn-large" disabled>
+            <span class="btn-icon">🏁</span>
+            게임 시작
+          </button>
+          <button id="leaveRoomBtn" class="btn btn-danger">
+            <span class="btn-icon">🚪</span>
+            나가기
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 게임 화면 -->
+    <div id="gameScreen" class="screen">
+      <div id="countdown" class="countdown hidden">3</div>
+      <canvas id="gameCanvas" width="1200" height="800"></canvas>
+      <div id="hud" class="hud">
+        <div class="hud-item speed">
+          <span class="hud-label">SPEED</span>
+          <span id="speedValue" class="hud-value">0</span>
+          <span class="hud-unit">km/h</span>
+        </div>
+        <div class="hud-item lap">
+          <span class="hud-label">LAP</span>
+          <span id="lapValue" class="hud-value">0/3</span>
+        </div>
+        <div class="hud-item position">
+          <span class="hud-label">POS</span>
+          <span id="positionValue" class="hud-value">1st</span>
+        </div>
+        <div class="hud-item time">
+          <span class="hud-label">TIME</span>
+          <span id="timeValue" class="hud-value">00:00.000</span>
+        </div>
+      </div>
+      <div id="leaderboard" class="leaderboard">
+        <h3>순위</h3>
+        <div id="racePositions"></div>
+      </div>
+      <!-- 레이스 중 나가기(리타이어) 버튼 -->
+      <button id="leaveRaceBtn" class="btn btn-danger game-leave-btn">
+        <span class="btn-icon">🚪</span>
+        나가기
+      </button>
+    </div>
+
+    <!-- 결과 화면 -->
+    <div id="resultScreen" class="screen">
+      <div class="result-container">
+        <h1>🏆 레이스 종료!</h1>
+        <div id="raceResults" class="race-results"></div>
+        <button id="backToLobbyBtn" class="btn btn-primary btn-large">
+          로비로 돌아가기
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+  <script src="/js/track.js"></script>
+  <script src="/js/renderer.js"></script>
+  <script src="/js/network.js"></script>
+  <script src="/js/game.js"></script>
+</body>
+</html>
+
