@@ -585,9 +585,10 @@ export class GameService {
     this.updateCheckpointProgress(car, checkpoints);
   
     const crossDir = this.checkStartLineCross(prevPosition, car.position, room.trackName);
-    if (crossDir === 'forward' && car.checkpoint === checkpoints.length - 1) {
+    // 모든 체크포인트를 통과한 상태에서 스타트 라인을 정방향으로 통과하면 랩 완료
+    if (crossDir === 'forward' && car.checkpoint >= checkpoints.length - 1) {
       car.lap += 1;
-      car.checkpoint = -1;
+      car.checkpoint = -1; // 다음 랩을 위해 체크포인트 초기화
   
       if (!car.retired && room.startTime != null && car.lap >= room.totalLaps) {
         car.finished = true;

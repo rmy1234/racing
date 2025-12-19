@@ -316,7 +316,7 @@ let GameService = class GameService {
         const checkpoints = this.getCheckpoints(room.trackName);
         this.updateCheckpointProgress(car, checkpoints);
         const crossDir = this.checkStartLineCross(prevPosition, car.position, room.trackName);
-        if (crossDir === 'forward' && car.checkpoint === checkpoints.length - 1) {
+        if (crossDir === 'forward' && car.checkpoint >= checkpoints.length - 1) {
             car.lap += 1;
             car.checkpoint = -1;
             if (!car.retired && room.startTime != null && car.lap >= room.totalLaps) {
