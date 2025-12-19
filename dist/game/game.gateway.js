@@ -99,7 +99,6 @@ let GameGateway = class GameGateway {
         const { room, wasHost } = this.gameService.leaveRoom(client.id);
         if (room) {
             client.leave(room.id);
-            client.emit('leftRoom');
             this.server.to(room.id).emit('playerLeft', {
                 playerId: client.id,
                 room: this.gameService.serializeRoom(room),
@@ -107,6 +106,7 @@ let GameGateway = class GameGateway {
             });
             this.server.emit('roomListUpdated', this.gameService.getWaitingRooms());
         }
+        client.emit('leftRoom');
     }
     handleStartGame(client) {
         const room = this.gameService.getRoomByPlayer(client.id);

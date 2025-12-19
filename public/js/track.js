@@ -3,17 +3,17 @@
 
 const Track = {
   name: 'Rounded Rectangle Circuit',
-  width: 1200,
-  height: 800,
+  width: 2400,
+  height: 1600,
   
   // 트랙 중앙선 경로 (수학적으로 정의된 둥근 사각형)
   // 전체 캔버스 기준으로 거의 완전한 직사각형 + 둥근 코너
   centerPath: (function () {
-    const cx = 600;
-    const cy = 400;
-    const halfWidth = 380;
-    const halfHeight = 220;
-    const cornerRadius = 140;
+    const cx = 1200;
+    const cy = 800;
+    const halfWidth = 760;
+    const halfHeight = 440;
+    const cornerRadius = 280;
 
     const points = [];
 
@@ -83,24 +83,24 @@ const Track = {
     return points;
   })(),
   
-  trackWidth: 90,  // 트랙 폭
+  trackWidth: 100,  // 트랙 폭 (차량 약 3.7대 분량)
   
   // 체크포인트 (시계 방향, 하단 스타트 구간은 제외)
   // 차량이 시계 방향(오른쪽으로 출발)으로 달린다고 가정하고
   // 우측 → 상단 → 좌측 순서로 통과하도록 설정
   checkpoints: [
-    { x: 930, y: 420, angle: -Math.PI / 2 },   // 우측 중앙 (↑)
-    { x: 600, y: 210, angle: Math.PI },        // 상단 중앙 (←)
-    { x: 260, y: 420, angle: Math.PI / 2 },    // 좌측 중앙 (↓)
+    { x: 1860, y: 840, angle: -Math.PI / 2 },   // 우측 중앙 (↑)
+    { x: 1200, y: 420, angle: Math.PI },        // 상단 중앙 (←)
+    { x: 520, y: 840, angle: Math.PI / 2 },    // 좌측 중앙 (↓)
   ],
   
   // 시작 위치
   startLine: {
-    x: 600,
-    // 트랙 하단 중앙선 위치 (centerPath 하단 y ≈ 620)에 맞춤
-    y: 620,
+    x: 1200,
+    // 트랙 하단 중앙선 위치 (centerPath 하단 y ≈ 1240)에 맞춤
+    y: 1240,
     // 트랙 폭과 동일하게
-    width: 90,
+    width: 100,
     angle: 0
   },
   
@@ -176,7 +176,7 @@ const Track = {
   
   // 체크포인트 통과 확인
   checkCheckpoint(x, y, lastCheckpoint) {
-    const checkpointRadius = 60;
+    const checkpointRadius = 120;
     const nextCheckpoint = (lastCheckpoint + 1) % this.checkpoints.length;
     const cp = this.checkpoints[nextCheckpoint];
     
@@ -195,18 +195,18 @@ const Track = {
   curbs: (function () {
     const curbs = [];
 
-    const cx = 600;
-    const cy = 400;
-    const halfWidth = 380;
-    const halfHeight = 220;
-    const cornerRadius = 140;
-    const trackWidth = 90;
+    const cx = 1200;
+    const cy = 800;
+    const halfWidth = 760;
+    const halfHeight = 440;
+    const cornerRadius = 280;
+    const trackWidth = 100;
 
-    const curbOffset = 6; // 중앙선에서 안쪽으로 더 들어가도록
+    const curbOffset = 8; // 중앙선에서 안쪽으로 더 들어가도록
     const innerRadius = cornerRadius - trackWidth / 2 - curbOffset;
 
-    const blockHeight = 16; // 연석 두께
-    const blocksPerCorner = 6;
+    const blockHeight = 20; // 연석 두께 (트랙 크기에 맞게 증가)
+    const blocksPerCorner = 10; // 코너당 연석 개수 증가 (큰 트랙에 맞게)
 
     function addCornerCurbs(cxArc, cyArc, startAngle, endAngle) {
       const totalAngle = endAngle - startAngle;

@@ -142,10 +142,11 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect, On
   handleLeaveRoom(@ConnectedSocket() client: Socket): void {
     const { room, wasHost } = this.gameService.leaveRoom(client.id);
 
+    // 방이 있으면 방에서 나가기
     if (room) {
       client.leave(room.id);
-      client.emit('leftRoom');
       
+      // 다른 플레이어들에게 플레이어 나감 알림
       this.server.to(room.id).emit('playerLeft', {
         playerId: client.id,
         room: this.gameService.serializeRoom(room),
@@ -154,6 +155,9 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect, On
       
       this.server.emit('roomListUpdated', this.gameService.getWaitingRooms());
     }
+    
+    // 방이 있든 없든 나간 클라이언트에게는 항상 leftRoom 이벤트 전송 (홈 화면으로 돌아가도록)
+    client.emit('leftRoom');
   }
 
   @SubscribeMessage('startGame')

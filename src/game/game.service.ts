@@ -84,8 +84,8 @@ export class GameService {
   private readonly OFF_TRACK_DECELERATION = 80;
   private readonly BRAKE_POWER = 80; // 브레이크 감속 km/h per second
   private readonly FRICTION = 40; // 자연 감속 km/h per second (가속 버튼에서 손 떼면 더 빨리 감속)
-  private readonly PIXELS_PER_METER = 6; // 1m를 몇 px로 볼지
-  private readonly TRACK_WIDTH_PX = 90; // 트랙 폭 (Track.trackWidth와 동일)
+  private readonly PIXELS_PER_METER = 8; // 1m를 몇 px로 볼지 (속도감 향상을 위해 6에서 12로 증가)
+  private readonly TRACK_WIDTH_PX = 100; // 트랙 폭 (Track.trackWidth와 동일, 차량 약 3.7대 분량)
   // 트랙 중앙선 경로 (둥근 사각형 서킷의 중심선 좌표 배열)
   // - buildTrackCenterPath() 메서드로 동적 생성
   // - 트랙 안/밖 판정(isOnTrack)에 사용
@@ -110,21 +110,21 @@ export class GameService {
   // 클라이언트 Track.checkpoints 와 동일한 체크포인트 (시계 방향)
   // 랩 판정에는 "하단 스타트 근처"는 제외하고, 우/상/좌 3개만 사용
   private readonly CHECKPOINTS: Vector2D[] = [
-    { x: 930, y: 420 }, // 우측 중앙
-    { x: 600, y: 210 }, // 상단 중앙
-    { x: 260, y: 420 }, // 좌측 중앙
+    { x: 1860, y: 840 }, // 우측 중앙
+    { x: 1200, y: 420 }, // 상단 중앙
+    { x: 520, y: 840 }, // 좌측 중앙
   ];
-  private readonly CHECKPOINT_RADIUS = 90; // 체크포인트 판정 반경
+  private readonly CHECKPOINT_RADIUS = 120; // 체크포인트 판정 반경
 
   // 스타트/피니시 라인 (Track.startLine 과 동일한 좌표/각도 사용)
   // 스타트 라인 중심점 X 좌표 (픽셀)
   // - 트랙 하단 중앙에 위치
-  private readonly START_LINE_X = 600;
+  private readonly START_LINE_X = 1200;
   // 스타트 라인 중심점 Y 좌표 (픽셀)
   // - 트랙 하단 중앙에 위치
-  private readonly START_LINE_Y = 620;
+  private readonly START_LINE_Y = 1240;
   private readonly START_LINE_ANGLE = 0; // 진행 방향(→)
-  private readonly START_LINE_HALF_LENGTH = 45; // 트랙 폭 90 기준 절반
+  private readonly START_LINE_HALF_LENGTH = 50; // 트랙 폭 100 기준 절반
   // ========================================
   // 🏎️ F1 그립 & 다운포스 시스템
   // ========================================
@@ -186,11 +186,11 @@ export class GameService {
 
   // 클라이언트 Track.centerPath 와 동일한 둥근 사각형 중앙선 생성
   private buildTrackCenterPath(): Vector2D[] {
-    const cx = 600;
-    const cy = 400;
-    const halfWidth = 380;
-    const halfHeight = 220;
-    const cornerRadius = 140;
+    const cx = 1200;
+    const cy = 800;
+    const halfWidth = 760;
+    const halfHeight = 440;
+    const cornerRadius = 280;
 
     const points: Vector2D[] = [];
     const segmentsPerCorner = 8;
@@ -311,14 +311,14 @@ export class GameService {
   private getSpawnPositions(): Vector2D[] {
     // 둥근 사각형 트랙 하단 시작선 근처 그리드 포지션
     return [
-      { x: 570, y: 640 },
-      { x: 610, y: 640 },
-      { x: 570, y: 675 },
-      { x: 610, y: 675 },
-      { x: 570, y: 710 },
-      { x: 610, y: 710 },
-      { x: 570, y: 745 },
-      { x: 610, y: 745 },
+      { x: 1140, y: 1280 },
+      { x: 1220, y: 1280 },
+      { x: 1140, y: 1350 },
+      { x: 1220, y: 1350 },
+      { x: 1140, y: 1420 },
+      { x: 1220, y: 1420 },
+      { x: 1140, y: 1490 },
+      { x: 1220, y: 1490 },
     ];
   }
 

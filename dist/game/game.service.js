@@ -21,21 +21,21 @@ let GameService = class GameService {
     OFF_TRACK_DECELERATION = 80;
     BRAKE_POWER = 80;
     FRICTION = 40;
-    PIXELS_PER_METER = 6;
-    TRACK_WIDTH_PX = 90;
+    PIXELS_PER_METER = 8;
+    TRACK_WIDTH_PX = 100;
     TRACK_CENTER_PATH = this.buildTrackCenterPath();
     MAX_STEER_ANGLE = Math.PI / 6.5;
     WHEEL_BASE_METERS = 3.0;
     CHECKPOINTS = [
-        { x: 930, y: 420 },
-        { x: 600, y: 210 },
-        { x: 260, y: 420 },
+        { x: 1860, y: 840 },
+        { x: 1200, y: 420 },
+        { x: 520, y: 840 },
     ];
-    CHECKPOINT_RADIUS = 90;
-    START_LINE_X = 600;
-    START_LINE_Y = 620;
+    CHECKPOINT_RADIUS = 120;
+    START_LINE_X = 1200;
+    START_LINE_Y = 1240;
     START_LINE_ANGLE = 0;
-    START_LINE_HALF_LENGTH = 45;
+    START_LINE_HALF_LENGTH = 50;
     BASE_LATERAL_GRIP = 11.0;
     DOWNFORCE_COEFF = 0.004;
     STEERING_RESPONSE_SPEED = 3.5;
@@ -60,11 +60,11 @@ let GameService = class GameService {
         return room;
     }
     buildTrackCenterPath() {
-        const cx = 600;
-        const cy = 400;
-        const halfWidth = 380;
-        const halfHeight = 220;
-        const cornerRadius = 140;
+        const cx = 1200;
+        const cy = 800;
+        const halfWidth = 760;
+        const halfHeight = 440;
+        const cornerRadius = 280;
         const points = [];
         const segmentsPerCorner = 8;
         const segmentsPerStraight = 20;
@@ -156,14 +156,14 @@ let GameService = class GameService {
     }
     getSpawnPositions() {
         return [
-            { x: 570, y: 640 },
-            { x: 610, y: 640 },
-            { x: 570, y: 675 },
-            { x: 610, y: 675 },
-            { x: 570, y: 710 },
-            { x: 610, y: 710 },
-            { x: 570, y: 745 },
-            { x: 610, y: 745 },
+            { x: 1140, y: 1280 },
+            { x: 1220, y: 1280 },
+            { x: 1140, y: 1350 },
+            { x: 1220, y: 1350 },
+            { x: 1140, y: 1420 },
+            { x: 1220, y: 1420 },
+            { x: 1140, y: 1490 },
+            { x: 1220, y: 1490 },
         ];
     }
     leaveRoom(playerId) {

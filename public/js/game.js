@@ -413,11 +413,17 @@ class Game {
   render() {
     if (!this.gameState) return;
     
-    this.renderer.clear();
-    this.renderer.drawTrack();
-    
     // 차량 렌더링
     const cars = this.gameState.players || [];
+    const localCar = cars.find(car => car.id === this.localPlayerId);
+    
+    // 카메라 설정 (로컬 플레이어 위치를 화면 중앙에 오도록)
+    if (localCar) {
+      this.renderer.setCamera(localCar.position.x, localCar.position.y);
+    }
+    
+    this.renderer.clear();
+    this.renderer.drawTrack();
     
     // 다른 플레이어 먼저
     cars.filter(car => car.id !== this.localPlayerId).forEach(car => {
@@ -425,14 +431,13 @@ class Game {
     });
     
     // 로컬 플레이어
-    const localCar = cars.find(car => car.id === this.localPlayerId);
     if (localCar) {
       this.renderer.drawSpeedEffect(localCar);
       this.renderer.drawCar(localCar, true);
       this.updateHUD(localCar, cars);
     }
     
-    // 미니맵
+    // 미니맵 (카메라 오프셋 영향 없음)
     this.renderer.drawMinimap(cars, this.localPlayerId);
   }
   

@@ -4,33 +4,62 @@ class Renderer {
     this.canvas = canvas;
     this.ctx = canvas.getContext('2d');
     this.smoothPath = null;
+    // 카메라 오프셋 (월드 좌표에서 화면 좌표로 변환)
+    this.cameraX = 0;
+    this.cameraY = 0;
+  }
+  
+  // 카메라 위치 설정 (플레이어 위치를 화면 중앙에 오도록)
+  setCamera(x, y) {
+    this.cameraX = x - this.canvas.width / 2;
+    this.cameraY = y - this.canvas.height / 2;
+  }
+  
+  // 월드 좌표를 화면 좌표로 변환
+  worldToScreen(x, y) {
+    return {
+      x: x - this.cameraX,
+      y: y - this.cameraY
+    };
   }
   
   clear() {
-    // 잔디 배경
-    const gradient = this.ctx.createLinearGradient(0, 0, 0, this.canvas.height);
+    // 카메라 오프셋 적용하여 배경 그리기
+    this.ctx.save();
+    this.ctx.translate(-this.cameraX, -this.cameraY);
+    
+    // 잔디 배경 (트랙 전체 크기에 맞춰 확장)
+    const gradient = this.ctx.createLinearGradient(0, 0, 0, Track.height);
     gradient.addColorStop(0, '#2d5a27');
     gradient.addColorStop(0.5, '#1e4620');
     gradient.addColorStop(1, '#2d5a27');
     
     this.ctx.fillStyle = gradient;
-    this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+    this.ctx.fillRect(0, 0, Track.width, Track.height);
     
     // 잔디 텍스처 패턴
     this.drawGrassPattern();
+    
+    this.ctx.restore();
   }
   
   drawGrassPattern() {
     this.ctx.fillStyle = 'rgba(0, 0, 0, 0.1)';
-    for (let i = 0; i < 200; i++) {
-      const x = Math.random() * this.canvas.width;
-      const y = Math.random() * this.canvas.height;
+    // 트랙 크기에 비례하여 패턴 수 증가
+    const patternCount = Math.floor((Track.width * Track.height) / 4800);
+    for (let i = 0; i < patternCount; i++) {
+      const x = Math.random() * Track.width;
+      const y = Math.random() * Track.height;
       this.ctx.fillRect(x, y, 2, 2);
     }
   }
   
   drawTrack() {
     const ctx = this.ctx;
+    
+    // 카메라 오프셋 적용
+    ctx.save();
+    ctx.translate(-this.cameraX, -this.cameraY);
     
     // 부드러운 트랙 경로 캐시
     if (!this.smoothPath) {
@@ -46,7 +75,7 @@ class Renderer {
     ctx.stroke();
     
     // 트랙 본체 (아스팔트)
-    const trackGradient = ctx.createLinearGradient(0, 0, this.canvas.width, this.canvas.height);
+    const trackGradient = ctx.createLinearGradient(0, 0, Track.width, Track.height);
     trackGradient.addColorStop(0, '#3d3d3d');
     trackGradient.addColorStop(0.5, '#4a4a4a');
     trackGradient.addColorStop(1, '#3d3d3d');
@@ -72,6 +101,8 @@ class Renderer {
     
     // 체크포인트 (디버그용, 필요시 주석 해제)
     // this.drawCheckpoints();
+    
+    ctx.restore();
   }
   
   drawPath(points) {
@@ -91,6 +122,7 @@ class Renderer {
     
     Track.curbs.forEach(curb => {
       ctx.save();
+      // 카메라 오프셋은 이미 적용되어 있음
       ctx.translate(curb.x, curb.y);
       ctx.rotate(curb.angle);
       
@@ -117,6 +149,7 @@ class Renderer {
     const startLine = Track.startLine;
     
     ctx.save();
+    // 카메라 오프셋은 이미 적용되어 있음
     ctx.translate(startLine.x, startLine.y);
     // startLine.angle 은 트랙 진행 방향(접선)이라고 보고,
     // 여기에 90도 회전시켜 트랙을 가로지르는 형태로 표시
@@ -166,6 +199,10 @@ class Renderer {
   drawCar(car, isLocalPlayer = false, scale = 1.0) {
     // 캔버스 컨텍스트 가져오기
     const ctx = this.ctx;
+    
+    // 카메라 오프셋 적용
+    ctx.save();
+    ctx.translate(-this.cameraX, -this.cameraY);
     
     // 차량 위치 좌표 추출
     const { x, y } = car.position;
@@ -628,6 +665,7 @@ class Renderer {
     ctx.shadowOffsetX = 1;
     ctx.shadowOffsetY = 1;
     
+    // 닉네임도 카메라 오프셋이 적용된 상태에서 그리기
     ctx.fillText(car.nickname, x, y - length * 0.65);
     
     // 그림자 초기화
@@ -635,6 +673,9 @@ class Renderer {
     ctx.shadowBlur = 0;
     ctx.shadowOffsetX = 0;
     ctx.shadowOffsetY = 0;
+    
+    // 카메라 오프셋 복원
+    ctx.restore();
   }
   
   // ========================================
