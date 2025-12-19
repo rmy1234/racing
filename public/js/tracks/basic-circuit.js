@@ -1,6 +1,11 @@
+// ============================================
 // 라운드 사각형 서킷 트랙 데이터
+// ============================================
 // 단순한 둥근 사각형 형태의 트랙
-
+// 
+// ⚠️ 이 트랙을 수정할 때는 src/game/tracks/track-configs.ts의 basicCircuitServerConfig도
+//    함께 수정해야 서버 측 트랙 판정이 올바르게 작동합니다!
+// ============================================
 const BasicCircuitTrack = {
   name: '기본 서킷',
   id: 'basic-circuit',
@@ -103,6 +108,88 @@ const BasicCircuitTrack = {
     // 트랙 폭과 동일하게
     width: 100,
     angle: 0
+  },
+
+  // ============================================
+  // 서버 측 데이터 (game.service.ts에서 사용)
+  // ============================================
+  serverConfig: {
+    // 서버 측 경로 생성 함수 (클라이언트 centerPath와 동일한 로직)
+    buildCenterPath: function() {
+      const points = [];
+      const cx = 1200;
+      const cy = 800;
+      const halfWidth = 760;
+      const halfHeight = 440;
+      const cornerRadius = 280;
+      const segmentsPerCorner = 8;
+      const segmentsPerStraight = 20;
+
+      function addArc(cxArc, cyArc, startAngle, endAngle) {
+        for (let i = 0; i <= segmentsPerCorner; i++) {
+          const t = i / segmentsPerCorner;
+          const angle = startAngle + (endAngle - startAngle) * t;
+          points.push({
+            x: cxArc + Math.cos(angle) * cornerRadius,
+            y: cyArc + Math.sin(angle) * cornerRadius,
+          });
+        }
+      }
+
+      function addStraight(x1, y1, x2, y2) {
+        for (let i = 1; i < segmentsPerStraight; i++) {
+          const t = i / segmentsPerStraight;
+          points.push({
+            x: x1 + (x2 - x1) * t,
+            y: y1 + (y2 - y1) * t,
+          });
+        }
+      }
+
+      const blCx = cx - halfWidth + cornerRadius;
+      const blCy = cy + halfHeight - cornerRadius;
+      const tlCx = cx - halfWidth + cornerRadius;
+      const tlCy = cy - halfHeight + cornerRadius;
+      const trCx = cx + halfWidth - cornerRadius;
+      const trCy = cy - halfHeight + cornerRadius;
+      const brCx = cx + halfWidth - cornerRadius;
+      const brCy = cy + halfHeight - cornerRadius;
+
+      const blBottom = { x: blCx, y: blCy + cornerRadius };
+      const blLeft = { x: blCx - cornerRadius, y: blCy };
+      const tlLeft = { x: tlCx - cornerRadius, y: tlCy };
+      const tlTop = { x: tlCx, y: tlCy - cornerRadius };
+      const trTop = { x: trCx, y: trCy - cornerRadius };
+      const trRight = { x: trCx + cornerRadius, y: trCy };
+      const brRight = { x: brCx + cornerRadius, y: brCy };
+      const brBottom = { x: brCx, y: brCy + cornerRadius };
+
+      addArc(blCx, blCy, Math.PI / 2, Math.PI);
+      addStraight(blLeft.x, blLeft.y, tlLeft.x, tlLeft.y);
+      addArc(tlCx, tlCy, Math.PI, (3 * Math.PI) / 2);
+      addStraight(tlTop.x, tlTop.y, trTop.x, trTop.y);
+      addArc(trCx, trCy, (3 * Math.PI) / 2, 2 * Math.PI);
+      addStraight(trRight.x, trRight.y, brRight.x, brRight.y);
+      addArc(brCx, brCy, 0, Math.PI / 2);
+      addStraight(brBottom.x, brBottom.y, blBottom.x, blBottom.y);
+
+      return points;
+    },
+
+    // 스폰 위치 (8개 그리드)
+    spawnPositions: [
+      { x: 1140, y: 1280 },
+      { x: 1220, y: 1280 },
+      { x: 1140, y: 1350 },
+      { x: 1220, y: 1350 },
+      { x: 1140, y: 1420 },
+      { x: 1220, y: 1420 },
+      { x: 1140, y: 1490 },
+      { x: 1220, y: 1490 },
+    ],
+
+    // 초기 각도
+    spawnAngle: 0
   },
   
   // 트랙 경계 생성 (중앙선에서 좌우로 확장)

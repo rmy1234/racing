@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { trackServerConfigs, TrackServerConfig } from './tracks/track-configs';
 
 export interface Vector2D {
   x: number;
@@ -89,10 +90,15 @@ export class GameService {
   // 트랙별 중앙선 경로 맵
   // - 각 트랙의 중심선 좌표 배열을 저장
   // - 트랙 안/밖 판정(isOnTrack)에 사용
-  private readonly trackCenterPaths: Map<string, Vector2D[]> = new Map([
-    ['basic-circuit', this.buildBasicCircuitCenterPath()],
-    ['monza', this.buildMonzaCenterPath()],
-  ]);
+  // - track-configs.ts에서 설정을 가져와서 동적으로 생성
+  private readonly trackCenterPaths: Map<string, Vector2D[]> = (() => {
+    const paths = new Map<string, Vector2D[]>();
+    trackServerConfigs.forEach((config, trackId) => {
+      const path = config.buildCenterPath();
+      paths.set(trackId, path.map(p => ({ x: p.x, y: p.y })));
+    });
+    return paths;
+  })();
   // ========================================
   // 🏎️ F1 조향 시스템 파라미터
   // ========================================
@@ -115,39 +121,31 @@ export class GameService {
 
   // 트랙별 체크포인트 정보
   private getCheckpoints(trackName: string): Vector2D[] {
-    if (trackName === 'monza') {
-      return [
-        { x: 700, y: 1250 },   // Turn 1-2 시케인 후
-        { x: 500, y: 800 },    // Turn 3 후
-        { x: 350, y: 400 },    // Turn 5 후
-        { x: 700, y: 200 },    // Lesmo 곡선 사이
-        { x: 1200, y: 450 },   // 백스트레이트 중간
-        { x: 1600, y: 800 },   // Ascari 시케인 중간
-        { x: 2100, y: 1200 },  // Parabolica 중간
-      ];
+    const config = trackServerConfigs.get(trackName);
+    if (config) {
+      return config.checkpoints.map(cp => ({ x: cp.x, y: cp.y }));
     }
-    // 기본 서킷: 우/상/좌 3개
-    return [
-      { x: 1860, y: 840 }, // 우측 중앙
-      { x: 1200, y: 420 }, // 상단 중앙
-      { x: 520, y: 840 },  // 좌측 중앙
-    ];
+    // 기본값: 기본 서킷
+    const defaultConfig = trackServerConfigs.get('basic-circuit')!;
+    return defaultConfig.checkpoints.map(cp => ({ x: cp.x, y: cp.y }));
   }
 
   // 트랙별 스타트 라인 정보
   private getStartLine(trackName: string): { x: number; y: number; angle: number } {
-    if (trackName === 'monza') {
+    const config = trackServerConfigs.get(trackName);
+    if (config) {
       return {
-        x: 2400,
-        y: 1450,
-        angle: Math.PI, // 왼쪽 방향 (180도)
+        x: config.startLine.x,
+        y: config.startLine.y,
+        angle: config.startLine.angle,
       };
     }
-    // 기본 서킷: 트랙 하단 중앙, 오른쪽 방향
+    // 기본값: 기본 서킷
+    const defaultConfig = trackServerConfigs.get('basic-circuit')!;
     return {
-      x: 1200,
-      y: 1240,
-      angle: 0, // 오른쪽 방향
+      x: defaultConfig.startLine.x,
+      y: defaultConfig.startLine.y,
+      angle: defaultConfig.startLine.angle,
     };
   }
   // ========================================
@@ -209,234 +207,6 @@ export class GameService {
     return room;
   }
 
-  // 클라이언트 Track.centerPath 와 동일한 기본 서킷 중앙선 생성
-  private buildBasicCircuitCenterPath(): Vector2D[] {
-    const cx = 1200;
-    const cy = 800;
-    const halfWidth = 760;
-    const halfHeight = 440;
-    const cornerRadius = 280;
-
-    const points: Vector2D[] = [];
-    const segmentsPerCorner = 8;
-    const segmentsPerStraight = 20;
-
-    const addArc = (
-      cxArc: number,
-      cyArc: number,
-      startAngle: number,
-      endAngle: number,
-    ) => {
-      for (let i = 0; i <= segmentsPerCorner; i++) {
-        const t = i / segmentsPerCorner;
-        const angle = startAngle + (endAngle - startAngle) * t;
-        points.push({
-          x: cxArc + Math.cos(angle) * cornerRadius,
-          y: cyArc + Math.sin(angle) * cornerRadius,
-        });
-      }
-    };
-
-    const addStraight = (x1: number, y1: number, x2: number, y2: number) => {
-      for (let i = 1; i < segmentsPerStraight; i++) {
-        const t = i / segmentsPerStraight;
-        points.push({
-          x: x1 + (x2 - x1) * t,
-          y: y1 + (y2 - y1) * t,
-        });
-      }
-    };
-
-    const blCx = cx - halfWidth + cornerRadius;
-    const blCy = cy + halfHeight - cornerRadius;
-    const tlCx = cx - halfWidth + cornerRadius;
-    const tlCy = cy - halfHeight + cornerRadius;
-    const trCx = cx + halfWidth - cornerRadius;
-    const trCy = cy - halfHeight + cornerRadius;
-    const brCx = cx + halfWidth - cornerRadius;
-    const brCy = cy + halfHeight - cornerRadius;
-
-    const blBottom = { x: blCx, y: blCy + cornerRadius };
-    const blLeft = { x: blCx - cornerRadius, y: blCy };
-    const tlLeft = { x: tlCx - cornerRadius, y: tlCy };
-    const tlTop = { x: tlCx, y: tlCy - cornerRadius };
-    const trTop = { x: trCx, y: trCy - cornerRadius };
-    const trRight = { x: trCx + cornerRadius, y: trCy };
-    const brRight = { x: brCx + cornerRadius, y: brCy };
-    const brBottom = { x: brCx, y: brCy + cornerRadius };
-
-    // 좌하단 → 좌상단 → 우상단 → 우하단 (시계 방향), 각 코너는 90도 호 + 직선 구간
-    addArc(blCx, blCy, Math.PI / 2, Math.PI); // 하단 → 좌측
-    addStraight(blLeft.x, blLeft.y, tlLeft.x, tlLeft.y); // 좌측 직선
-
-    addArc(tlCx, tlCy, Math.PI, (3 * Math.PI) / 2); // 좌측 → 상단
-    addStraight(tlTop.x, tlTop.y, trTop.x, trTop.y); // 상단 직선
-
-    addArc(trCx, trCy, (3 * Math.PI) / 2, 2 * Math.PI); // 상단 → 우측
-    addStraight(trRight.x, trRight.y, brRight.x, brRight.y); // 우측 직선
-
-    addArc(brCx, brCy, 0, Math.PI / 2); // 우측 → 하단
-    addStraight(brBottom.x, brBottom.y, blBottom.x, blBottom.y); // 하단 직선
-
-    return points;
-  }
-
-  // 몬차 서킷 중앙선 생성 (클라이언트 MonzaTrack.centerPath와 동일)
-  private buildMonzaCenterPath(): Vector2D[] {
-    const points: Vector2D[] = [];
-    const segmentsPerCurve = 12;
-    const segmentsPerStraight = 25;
-
-    // 부드러운 곡선을 위한 헬퍼 함수
-    const addArc = (
-      cx: number,
-      cy: number,
-      radius: number,
-      startAngle: number,
-      endAngle: number,
-      segments = segmentsPerCurve,
-    ) => {
-      for (let i = 0; i <= segments; i++) {
-        const t = i / segments;
-        const angle = startAngle + (endAngle - startAngle) * t;
-        points.push({
-          x: cx + Math.cos(angle) * radius,
-          y: cy + Math.sin(angle) * radius,
-        });
-      }
-    };
-
-    const addStraight = (
-      x1: number,
-      y1: number,
-      x2: number,
-      y2: number,
-      segments = segmentsPerStraight,
-    ) => {
-      for (let i = 0; i <= segments; i++) {
-        const t = i / segments;
-        points.push({
-          x: x1 + (x2 - x1) * t,
-          y: y1 + (y2 - y1) * t,
-        });
-      }
-    };
-
-    // 베지어 곡선 헬퍼 (부드러운 S자 시케인용)
-    const addBezier = (
-      p0: Vector2D,
-      p1: Vector2D,
-      p2: Vector2D,
-      p3: Vector2D,
-      segments = segmentsPerCurve,
-    ) => {
-      for (let i = 0; i <= segments; i++) {
-        const t = i / segments;
-        const u = 1 - t;
-        const x =
-          u * u * u * p0.x +
-          3 * u * u * t * p1.x +
-          3 * u * t * t * p2.x +
-          t * t * t * p3.x;
-        const y =
-          u * u * u * p0.y +
-          3 * u * u * t * p1.y +
-          3 * u * t * t * p2.y +
-          t * t * t * p3.y;
-        points.push({ x, y });
-      }
-    };
-
-    // 몬차 서킷 레이아웃 (시계 방향으로 주행)
-    // Start/Finish 라인 위치: 오른쪽 하단 직선
-
-    // ===== 1. 메인 스트레이트 (Start/Finish) =====
-    addStraight(2550, 1450, 900, 1450, 35);
-
-    // ===== 2. Turn 1-2: Variante del Rettifilo (첫 번째 시케인) =====
-    addBezier(
-      { x: 900, y: 1450 },
-      { x: 750, y: 1450 },
-      { x: 700, y: 1380 },
-      { x: 700, y: 1320 },
-      10,
-    );
-    addBezier(
-      { x: 700, y: 1320 },
-      { x: 700, y: 1260 },
-      { x: 750, y: 1200 },
-      { x: 820, y: 1180 },
-      10,
-    );
-
-    // ===== 3. Turn 3: Curva Grande 방향으로 좌회전 =====
-    addStraight(820, 1180, 650, 1100, 15);
-    addArc(650, 950, 150, Math.PI / 2, Math.PI, 10);
-
-    // ===== 4. 짧은 직선 (Turn 3 → Turn 4) =====
-    addStraight(500, 950, 500, 700, 15);
-
-    // ===== 5. Turn 4-5: Variante della Roggia (두 번째 시케인) =====
-    addBezier(
-      { x: 500, y: 700 },
-      { x: 500, y: 620 },
-      { x: 450, y: 560 },
-      { x: 380, y: 540 },
-      10,
-    );
-    addBezier(
-      { x: 380, y: 540 },
-      { x: 310, y: 520 },
-      { x: 280, y: 460 },
-      { x: 300, y: 400 },
-      10,
-    );
-
-    // ===== 6. Turn 6: Curve di Lesmo 1 =====
-    addStraight(300, 400, 350, 300, 10);
-    addArc(500, 300, 150, Math.PI, Math.PI * 1.5, 12);
-
-    // ===== 7. Turn 7: Curve di Lesmo 2 =====
-    addStraight(500, 150, 700, 150, 10);
-    addArc(700, 300, 150, -Math.PI / 2, 0, 12);
-
-    // ===== 8. 백스트레이트 (Serraglio → Ascari) =====
-    addStraight(850, 300, 1400, 500, 25);
-
-    // ===== 9. Turn 8-9-10: Variante Ascari (아스카리 시케인) =====
-    addBezier(
-      { x: 1400, y: 500 },
-      { x: 1500, y: 540 },
-      { x: 1550, y: 620 },
-      { x: 1520, y: 700 },
-      12,
-    );
-    addBezier(
-      { x: 1520, y: 700 },
-      { x: 1490, y: 780 },
-      { x: 1550, y: 860 },
-      { x: 1650, y: 880 },
-      12,
-    );
-    addBezier(
-      { x: 1650, y: 880 },
-      { x: 1750, y: 900 },
-      { x: 1800, y: 950 },
-      { x: 1850, y: 1000 },
-      10,
-    );
-
-    // ===== 10. 짧은 직선 (Ascari → Parabolica) =====
-    addStraight(1850, 1000, 2100, 1100, 15);
-
-    // ===== 11. Turn 11: Curva Parabolica (파라볼리카) =====
-    addArc(2100, 1350, 250, -Math.PI / 2, Math.PI / 6, 20);
-
-    // ===== 12. 파라볼리카 출구 → 스타트/피니시 라인 =====
-    addStraight(2317, 1475, 2550, 1450, 10);
-
-    return points;
-  }
 
   joinRoom(roomId: string, playerId: string, nickname: string, carSkin?: string | null): GameRoom | null {
     const room = this.rooms.get(roomId);
@@ -492,36 +262,18 @@ export class GameService {
 
   private getSpawnPositions(trackName: string): { positions: Vector2D[]; angle: number } {
     // 트랙별 그리드 포지션과 초기 각도 반환
-    if (trackName === 'monza') {
-      // 몬차: 메인 스트레이트 (오른쪽 하단, 왼쪽 방향으로 출발)
+    const config = trackServerConfigs.get(trackName);
+    if (config) {
       return {
-        positions: [
-          { x: 2450, y: 1420 },
-          { x: 2450, y: 1480 },
-          { x: 2380, y: 1420 },
-          { x: 2380, y: 1480 },
-          { x: 2310, y: 1420 },
-          { x: 2310, y: 1480 },
-          { x: 2240, y: 1420 },
-          { x: 2240, y: 1480 },
-        ],
-        angle: Math.PI, // 왼쪽 방향 (180도)
+        positions: config.spawnPositions.map(p => ({ x: p.x, y: p.y })),
+        angle: config.spawnAngle,
       };
     }
-    
-    // 기본 서킷: 하단 시작선 근처 그리드 포지션 (오른쪽 방향으로 출발)
+    // 기본값: 기본 서킷
+    const defaultConfig = trackServerConfigs.get('basic-circuit')!;
     return {
-      positions: [
-        { x: 1140, y: 1280 },
-        { x: 1220, y: 1280 },
-        { x: 1140, y: 1350 },
-        { x: 1220, y: 1350 },
-        { x: 1140, y: 1420 },
-        { x: 1220, y: 1420 },
-        { x: 1140, y: 1490 },
-        { x: 1220, y: 1490 },
-      ],
-      angle: 0, // 오른쪽 방향 (0도)
+      positions: defaultConfig.spawnPositions.map(p => ({ x: p.x, y: p.y })),
+      angle: defaultConfig.spawnAngle,
     };
   }
 
@@ -987,6 +739,7 @@ export class GameService {
   }
 
   // 중앙선으로부터의 최소 거리를 이용해 트랙 안/밖 판정
+  // 클라이언트와 동일한 판정 범위 사용 (trackWidth / 2 + 15)
   private isOnTrack(position: Vector2D, trackName: string): boolean {
     const centerPath = this.trackCenterPaths.get(trackName) || this.trackCenterPaths.get('basic-circuit')!;
     let minDistSq = Infinity;
@@ -1000,7 +753,8 @@ export class GameService {
       }
     }
 
-    const maxDist = this.TRACK_WIDTH_PX / 2 + 10; // 약간 여유
+    // 클라이언트와 동일: trackWidth(100) / 2 + 15 = 65
+    const maxDist = this.TRACK_WIDTH_PX / 2 + 15;
     return minDistSq <= maxDist * maxDist;
   }
 
