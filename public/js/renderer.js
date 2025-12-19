@@ -339,7 +339,7 @@ class Renderer {
     ctx.fill();
 
     // ========================================
-// 5) 프론트 윙 (실제 F1 스타일 - Swept back 및 멀티 엘리먼트)
+    // 5) 프론트 윙 (실제 F1 스타일 - Swept back 및 멀티 엘리먼트)
     // ========================================
     // 실제 F1 차량처럼 중앙이 앞서고 양 끝이 뒤로 처지는 형태, 여러 겹의 플랩 표현
 
@@ -358,36 +358,36 @@ class Renderer {
 
     // 오른쪽 날개 앞선 (부드러운 곡선으로 뒤로 처짐)
     ctx.bezierCurveTo(
-        noseWidth * 0.8, wingLeadingEdgeY,         // 제어점 1
-        wingHalfSpan * 0.6, wingLeadingEdgeY,      // 제어점 2
-        wingHalfSpan, wingLeadingEdgeY + wingSweep // 끝점 (오른쪽 윙팁 앞)
+      noseWidth * 0.8, wingLeadingEdgeY,         // 제어점 1
+      wingHalfSpan * 0.6, wingLeadingEdgeY,      // 제어점 2
+      wingHalfSpan, wingLeadingEdgeY + wingSweep // 끝점 (오른쪽 윙팁 앞)
     );
     // 오른쪽 윙팁 옆선
     ctx.lineTo(wingHalfSpan, wingLeadingEdgeY + wingSweep + wingChord);
 
     // 오른쪽 날개 뒷선 (다시 중앙으로 곡선)
     ctx.bezierCurveTo(
-        wingHalfSpan * 0.6, wingLeadingEdgeY + wingChord,
-        noseWidth * 0.8, wingLeadingEdgeY + wingChord + 2,
-        noseWidth * 0.5, wingLeadingEdgeY + wingChord + 4
+      wingHalfSpan * 0.6, wingLeadingEdgeY + wingChord,
+      noseWidth * 0.8, wingLeadingEdgeY + wingChord + 2,
+      noseWidth * 0.5, wingLeadingEdgeY + wingChord + 4
     );
     // 중앙 뒷부분 연결
     ctx.lineTo(-noseWidth * 0.5, wingLeadingEdgeY + wingChord + 4);
 
     // 왼쪽 날개 뒷선 (대칭)
     ctx.bezierCurveTo(
-        -wingHalfSpan * 0.6, wingLeadingEdgeY + wingChord,
-        -noseWidth * 0.8, wingLeadingEdgeY + wingChord + 2,
-        -wingHalfSpan, wingLeadingEdgeY + wingSweep + wingChord
+      -wingHalfSpan * 0.6, wingLeadingEdgeY + wingChord,
+      -noseWidth * 0.8, wingLeadingEdgeY + wingChord + 2,
+      -wingHalfSpan, wingLeadingEdgeY + wingSweep + wingChord
     );
     // 왼쪽 윙팁 옆선
     ctx.lineTo(-wingHalfSpan, wingLeadingEdgeY + wingSweep);
 
     // 왼쪽 날개 앞선 (대칭)
     ctx.bezierCurveTo(
-        -wingHalfSpan * 0.6, wingLeadingEdgeY,
-        -noseWidth * 0.8, wingLeadingEdgeY,
-        -noseWidth * 0.5, wingLeadingEdgeY + 2
+      -wingHalfSpan * 0.6, wingLeadingEdgeY,
+      -noseWidth * 0.8, wingLeadingEdgeY,
+      -noseWidth * 0.5, wingLeadingEdgeY + 2
     );
     ctx.closePath();
     ctx.fill();
@@ -403,35 +403,35 @@ class Renderer {
 
     // 오른쪽 플랩 곡선
     ctx.bezierCurveTo(
-        wingHalfSpan * 0.5, wingLeadingEdgeY + flapOffset - 1,
-        wingHalfSpan * 0.9, wingLeadingEdgeY + wingSweep + flapOffset - 2,
-        wingHalfSpan - 1, wingLeadingEdgeY + wingSweep + flapOffset
+      wingHalfSpan * 0.5, wingLeadingEdgeY + flapOffset - 1,
+      wingHalfSpan * 0.9, wingLeadingEdgeY + wingSweep + flapOffset - 2,
+      wingHalfSpan - 1, wingLeadingEdgeY + wingSweep + flapOffset
     );
     // 오른쪽 플랩 뒷선 및 중앙 복귀
     ctx.lineTo(wingHalfSpan - 1, wingLeadingEdgeY + wingSweep + wingChord - 2);
     ctx.bezierCurveTo(
-        wingHalfSpan * 0.5, wingLeadingEdgeY + wingChord,
-        noseWidth * 0.4, wingLeadingEdgeY + wingChord + 2,
-        noseWidth * 0.4, wingLeadingEdgeY + wingChord + 3
+      wingHalfSpan * 0.5, wingLeadingEdgeY + wingChord,
+      noseWidth * 0.4, wingLeadingEdgeY + wingChord + 2,
+      noseWidth * 0.4, wingLeadingEdgeY + wingChord + 3
     );
     ctx.lineTo(-noseWidth * 0.4, wingLeadingEdgeY + wingChord + 3);
 
     // 왼쪽 플랩 (대칭)
     ctx.bezierCurveTo(
-        -wingHalfSpan * 0.5, wingLeadingEdgeY + wingChord,
-        -noseWidth * 0.4, wingLeadingEdgeY + wingChord + 2,
-        -wingHalfSpan + 1, wingLeadingEdgeY + wingSweep + wingChord - 2
+      -wingHalfSpan * 0.5, wingLeadingEdgeY + wingChord,
+      -noseWidth * 0.4, wingLeadingEdgeY + wingChord + 2,
+      -wingHalfSpan + 1, wingLeadingEdgeY + wingSweep + wingChord - 2
     );
     ctx.lineTo(-wingHalfSpan + 1, wingLeadingEdgeY + wingSweep + flapOffset);
     ctx.bezierCurveTo(
-        -wingHalfSpan * 0.9, wingLeadingEdgeY + wingSweep + flapOffset - 2,
-        -wingHalfSpan * 0.5, wingLeadingEdgeY + flapOffset - 1,
-        -noseWidth * 0.4, wingLeadingEdgeY + flapOffset
+      -wingHalfSpan * 0.9, wingLeadingEdgeY + wingSweep + flapOffset - 2,
+      -wingHalfSpan * 0.5, wingLeadingEdgeY + flapOffset - 1,
+      -noseWidth * 0.4, wingLeadingEdgeY + flapOffset
     );
     ctx.closePath();
     ctx.fill();
     // 플랩 경계선을 그려주어 레이어를 더 명확히 함 (선택 사항)
-    ctx.strokeStyle = "rgba(0,0,0,0.2)";
+    ctx.strokeStyle = 'rgba(0,0,0,0.2)';
     ctx.lineWidth = 0.5;
     ctx.stroke();
 
@@ -453,32 +453,52 @@ class Renderer {
     ctx.fill();
 
     // ========================================
-    // 6) 리어 윙 (뒷바퀴 사이, 겹치지 않게)
+// 6) 리어 윙 (직선형 F1 구조)
     // ========================================
-    // 리어 윙이 뒷바퀴와 겹치지 않도록 크기 조절
-    const rearWingY = rearWheelY + 2;
-    const rearWingSpan = wheelOffsetX * 1.0;  // 뒷바퀴 안쪽보다 좁게
+    const rearWingY = rearWheelY + 6;     // 위치 조정
+    const wingWidth = wheelOffsetX * 1.1; // 윙 전체 너비
+    const mainWingHeight = 8;             // 메인 날개 두께(깊이)
+    const flapGap = 0;                  // 플랩 사이 틈새
 
-    // 메인 플레이트 (바디 색상과 통일)
-    ctx.fillStyle = palette.bodyTop;  // 바디 색상과 통일
+    // --- 1. 메인 플레이트 (Main Plane - 하단 날개) ---
+    // 직선 형태의 견고한 구조
+    ctx.fillStyle = palette.bodyTop;
+    ctx.fillRect(-wingWidth / 2, rearWingY, wingWidth, mainWingHeight);
+
+    // --- 2. 상단 플랩 (Upper Flap - DRS 부분) ---
+    // 메인 플레이트 바로 뒤에 직선으로 배치
+    ctx.fillStyle = palette.bodyTop;
     ctx.beginPath();
-    ctx.roundRect(-rearWingSpan / 2, rearWingY, rearWingSpan, 6, 2);
+    // 약간의 입체감을 위해 윗부분만 아주 살짝 깎인 직사각형
+    ctx.moveTo(-wingWidth / 2 + 1, rearWingY + mainWingHeight + flapGap);
+    ctx.lineTo(wingWidth / 2 - 1, rearWingY + mainWingHeight + flapGap);
+    ctx.lineTo(wingWidth / 2 - 1, rearWingY + mainWingHeight + flapGap + 4);
+    ctx.lineTo(-wingWidth / 2 + 1, rearWingY + mainWingHeight + flapGap + 4);
+    ctx.closePath();
     ctx.fill();
 
-    // 윙 플랩 (바디 색상과 통일)
-    ctx.fillStyle = palette.bodyTop;  // 바디 색상과 통일
-    ctx.beginPath();
-    ctx.roundRect(-rearWingSpan / 2 + 2, rearWingY + 3, rearWingSpan - 4, 4, 2);
-    ctx.fill();
+    // 플랩 경계선 (날개가 겹쳐진 느낌 강조)
+    ctx.strokeStyle = "rgba(0,0,0,0.4)";
+    ctx.lineWidth = 0.8;
+    ctx.stroke();
 
-    // 엔드플레이트 (바디 색상과 통일)
-    ctx.fillStyle = palette.bodyTop;  // 바디 색상과 통일
-    ctx.fillRect(-rearWingSpan / 2 - 3, rearWingY - 2, 5, 14);
-    ctx.fillRect(rearWingSpan / 2 - 2, rearWingY - 2, 5, 14);
+    // --- 3. 직선형 엔드플레이트 (Endplates) ---
+    // 양 끝을 잡아주는 수직 판
+    ctx.fillStyle = palette.bodyTop;
+    const epWidth = 3;      // 엔드플레이트 두께
+    const epHeight = 16;     // 엔드플레이트 전체 길이
+    const epOffset = 4;      // 윙 앞쪽으로 돌출된 정도
+
+    // 왼쪽 엔드플레이트
+    ctx.fillRect(-wingWidth / 2 - epWidth, rearWingY - epOffset, epWidth, epHeight);
     
-    // 리어 윙 지지대
+    // 오른쪽 엔드플레이트
+    ctx.fillRect(wingWidth / 2, rearWingY - epOffset, epWidth, epHeight);
+
+    // --- 4. 중앙 지지대 및 마운트 ---
     ctx.fillStyle = palette.floor;
-    ctx.fillRect(-2, length * 0.35, 4, rearWingY - length * 0.35);
+    // 중앙 싱글 필러 (Single Pillar)
+    ctx.fillRect(-1.5, length * 0.38, 3, rearWingY - length * 0.38 + 2);
 
     // ========================================
     // 7) 콕핏 / 헬멧
