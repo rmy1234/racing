@@ -59,10 +59,9 @@ class Game {
   // 색상 선택 UI 설정
   setupColorPicker() {
     const colorPicker = document.getElementById('carColorPicker');
-    const colorPreview = document.getElementById('colorPreview');
     const colorValueText = document.getElementById('colorValueText');
 
-    if (!colorPicker || !colorPreview || !colorValueText) {
+    if (!colorPicker || !colorValueText) {
       return;
     }
 
@@ -81,8 +80,7 @@ class Game {
       const rgb = hexToRgb(hexColor);
       
       if (rgb) {
-        // 색상 미리보기 업데이트
-        colorPreview.style.background = hexColor;
+        // HEX 값 표시 업데이트
         colorValueText.textContent = hexColor.toUpperCase();
         
         // 게임 객체에 색상 저장
@@ -126,8 +124,8 @@ class Game {
         // 배경 클리어
         previewRenderer.clear();
         
-        // 차량 그리기
-        previewRenderer.drawCar(testCar, true);
+        // 차량 그리기 (미리보기에서는 1.2배 크기로 표시)
+        previewRenderer.drawCar(testCar, true, 1.5);
         
         // 조향각 애니메이션 (시각 효과)
         testCar.steerAngle = Math.sin(Date.now() / 1000) * 0.3;

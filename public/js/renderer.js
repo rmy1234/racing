@@ -162,7 +162,8 @@ class Renderer {
   // F1 스타일 차량 그리기 (캔버스 벡터 드로잉)
   // @param {Object} car - 차량 상태 객체 (position, angle, steerAngle, nickname 등)
   // @param {boolean} isLocalPlayer - 로컬 플레이어 여부 (닉네임 색상 변경용)
-  drawCar(car, isLocalPlayer = false) {
+  // @param {number} scale - 차량 크기 배율 (기본값: 1.0)
+  drawCar(car, isLocalPlayer = false, scale = 1.0) {
     // 캔버스 컨텍스트 가져오기
     const ctx = this.ctx;
     
@@ -183,6 +184,11 @@ class Renderer {
     
     // 차량 위치로 좌표계 이동
     ctx.translate(x, y);
+    
+    // 스케일 적용 (미리보기 등에서 차량 크기 조정용)
+    if (scale !== 1.0) {
+      ctx.scale(scale, scale);
+    }
     
     // 차체 각도만큼 회전 (Math.PI / 2는 캔버스 좌표계 보정)
     // - 캔버스는 위쪽이 -y, 아래쪽이 +y
