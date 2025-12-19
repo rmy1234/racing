@@ -23,19 +23,46 @@ let GameService = class GameService {
     FRICTION = 40;
     PIXELS_PER_METER = 8;
     TRACK_WIDTH_PX = 100;
-    TRACK_CENTER_PATH = this.buildTrackCenterPath();
+    trackCenterPaths = new Map([
+        ['basic-circuit', this.buildBasicCircuitCenterPath()],
+        ['monza', this.buildMonzaCenterPath()],
+    ]);
     MAX_STEER_ANGLE = Math.PI / 6.5;
     WHEEL_BASE_METERS = 3.0;
-    CHECKPOINTS = [
-        { x: 1860, y: 840 },
-        { x: 1200, y: 420 },
-        { x: 520, y: 840 },
-    ];
     CHECKPOINT_RADIUS = 120;
-    START_LINE_X = 1200;
-    START_LINE_Y = 1240;
-    START_LINE_ANGLE = 0;
     START_LINE_HALF_LENGTH = 50;
+    getCheckpoints(trackName) {
+        if (trackName === 'monza') {
+            return [
+                { x: 700, y: 1250 },
+                { x: 500, y: 800 },
+                { x: 350, y: 400 },
+                { x: 700, y: 200 },
+                { x: 1200, y: 450 },
+                { x: 1600, y: 800 },
+                { x: 2100, y: 1200 },
+            ];
+        }
+        return [
+            { x: 1860, y: 840 },
+            { x: 1200, y: 420 },
+            { x: 520, y: 840 },
+        ];
+    }
+    getStartLine(trackName) {
+        if (trackName === 'monza') {
+            return {
+                x: 2400,
+                y: 1450,
+                angle: Math.PI,
+            };
+        }
+        return {
+            x: 1200,
+            y: 1240,
+            angle: 0,
+        };
+    }
     BASE_LATERAL_GRIP = 11.0;
     DOWNFORCE_COEFF = 0.004;
     STEERING_RESPONSE_SPEED = 3.5;
@@ -59,7 +86,7 @@ let GameService = class GameService {
         this.playerRooms.set(hostId, roomId);
         return room;
     }
-    buildTrackCenterPath() {
+    buildBasicCircuitCenterPath() {
         const cx = 1200;
         const cy = 800;
         const halfWidth = 760;
@@ -113,6 +140,65 @@ let GameService = class GameService {
         addStraight(brBottom.x, brBottom.y, blBottom.x, blBottom.y);
         return points;
     }
+    buildMonzaCenterPath() {
+        const points = [];
+        const segmentsPerCurve = 12;
+        const segmentsPerStraight = 25;
+        const addArc = (cx, cy, radius, startAngle, endAngle, segments = segmentsPerCurve) => {
+            for (let i = 0; i <= segments; i++) {
+                const t = i / segments;
+                const angle = startAngle + (endAngle - startAngle) * t;
+                points.push({
+                    x: cx + Math.cos(angle) * radius,
+                    y: cy + Math.sin(angle) * radius,
+                });
+            }
+        };
+        const addStraight = (x1, y1, x2, y2, segments = segmentsPerStraight) => {
+            for (let i = 0; i <= segments; i++) {
+                const t = i / segments;
+                points.push({
+                    x: x1 + (x2 - x1) * t,
+                    y: y1 + (y2 - y1) * t,
+                });
+            }
+        };
+        const addBezier = (p0, p1, p2, p3, segments = segmentsPerCurve) => {
+            for (let i = 0; i <= segments; i++) {
+                const t = i / segments;
+                const u = 1 - t;
+                const x = u * u * u * p0.x +
+                    3 * u * u * t * p1.x +
+                    3 * u * t * t * p2.x +
+                    t * t * t * p3.x;
+                const y = u * u * u * p0.y +
+                    3 * u * u * t * p1.y +
+                    3 * u * t * t * p2.y +
+                    t * t * t * p3.y;
+                points.push({ x, y });
+            }
+        };
+        addStraight(2550, 1450, 900, 1450, 35);
+        addBezier({ x: 900, y: 1450 }, { x: 750, y: 1450 }, { x: 700, y: 1380 }, { x: 700, y: 1320 }, 10);
+        addBezier({ x: 700, y: 1320 }, { x: 700, y: 1260 }, { x: 750, y: 1200 }, { x: 820, y: 1180 }, 10);
+        addStraight(820, 1180, 650, 1100, 15);
+        addArc(650, 950, 150, Math.PI / 2, Math.PI, 10);
+        addStraight(500, 950, 500, 700, 15);
+        addBezier({ x: 500, y: 700 }, { x: 500, y: 620 }, { x: 450, y: 560 }, { x: 380, y: 540 }, 10);
+        addBezier({ x: 380, y: 540 }, { x: 310, y: 520 }, { x: 280, y: 460 }, { x: 300, y: 400 }, 10);
+        addStraight(300, 400, 350, 300, 10);
+        addArc(500, 300, 150, Math.PI, Math.PI * 1.5, 12);
+        addStraight(500, 150, 700, 150, 10);
+        addArc(700, 300, 150, -Math.PI / 2, 0, 12);
+        addStraight(850, 300, 1400, 500, 25);
+        addBezier({ x: 1400, y: 500 }, { x: 1500, y: 540 }, { x: 1550, y: 620 }, { x: 1520, y: 700 }, 12);
+        addBezier({ x: 1520, y: 700 }, { x: 1490, y: 780 }, { x: 1550, y: 860 }, { x: 1650, y: 880 }, 12);
+        addBezier({ x: 1650, y: 880 }, { x: 1750, y: 900 }, { x: 1800, y: 950 }, { x: 1850, y: 1000 }, 10);
+        addStraight(1850, 1000, 2100, 1100, 15);
+        addArc(2100, 1350, 250, -Math.PI / 2, Math.PI / 6, 20);
+        addStraight(2317, 1475, 2550, 1450, 10);
+        return points;
+    }
     joinRoom(roomId, playerId, nickname, carSkin) {
         const room = this.rooms.get(roomId);
         if (!room)
@@ -127,14 +213,14 @@ let GameService = class GameService {
         return room;
     }
     addPlayerToRoom(room, playerId, nickname, spawnIndex, carSkin) {
-        const spawnPositions = this.getSpawnPositions();
-        const spawnPos = spawnPositions[spawnIndex % spawnPositions.length];
+        const spawnData = this.getSpawnPositions(room.trackName);
+        const spawnPos = spawnData.positions[spawnIndex % spawnData.positions.length];
         const carState = {
             id: playerId,
             nickname,
             position: { ...spawnPos },
             velocity: { x: 0, y: 0 },
-            angle: 0,
+            angle: spawnData.angle,
             speed: 0,
             steerAngle: 0,
             input: {
@@ -154,17 +240,35 @@ let GameService = class GameService {
         };
         room.players.set(playerId, carState);
     }
-    getSpawnPositions() {
-        return [
-            { x: 1140, y: 1280 },
-            { x: 1220, y: 1280 },
-            { x: 1140, y: 1350 },
-            { x: 1220, y: 1350 },
-            { x: 1140, y: 1420 },
-            { x: 1220, y: 1420 },
-            { x: 1140, y: 1490 },
-            { x: 1220, y: 1490 },
-        ];
+    getSpawnPositions(trackName) {
+        if (trackName === 'monza') {
+            return {
+                positions: [
+                    { x: 2450, y: 1420 },
+                    { x: 2450, y: 1480 },
+                    { x: 2380, y: 1420 },
+                    { x: 2380, y: 1480 },
+                    { x: 2310, y: 1420 },
+                    { x: 2310, y: 1480 },
+                    { x: 2240, y: 1420 },
+                    { x: 2240, y: 1480 },
+                ],
+                angle: Math.PI,
+            };
+        }
+        return {
+            positions: [
+                { x: 1140, y: 1280 },
+                { x: 1220, y: 1280 },
+                { x: 1140, y: 1350 },
+                { x: 1220, y: 1350 },
+                { x: 1140, y: 1420 },
+                { x: 1220, y: 1420 },
+                { x: 1140, y: 1490 },
+                { x: 1220, y: 1490 },
+            ],
+            angle: 0,
+        };
     }
     leaveRoom(playerId) {
         const roomId = this.playerRooms.get(playerId);
@@ -268,7 +372,7 @@ let GameService = class GameService {
     }
     updateCarPhysics(room, car, input, deltaTime) {
         const prevPosition = { ...car.position };
-        const onTrack = this.isOnTrack(car.position);
+        const onTrack = this.isOnTrack(car.position, room.trackName);
         const maxForwardSpeed = onTrack ? this.MAX_SPEED : this.MAX_SPEED_OFF_TRACK;
         if (input.up) {
             const accel = onTrack
@@ -341,9 +445,10 @@ let GameService = class GameService {
         car.position.y += car.velocity.y * deltaTime;
         if (Math.abs(car.speed) < 0.1)
             car.speed = 0;
-        this.updateCheckpointProgress(car);
-        const crossDir = this.checkStartLineCross(prevPosition, car.position);
-        if (crossDir === 'forward' && car.checkpoint === this.CHECKPOINTS.length - 1) {
+        const checkpoints = this.getCheckpoints(room.trackName);
+        this.updateCheckpointProgress(car, checkpoints);
+        const crossDir = this.checkStartLineCross(prevPosition, car.position, room.trackName);
+        if (crossDir === 'forward' && car.checkpoint === checkpoints.length - 1) {
             car.lap += 1;
             car.checkpoint = -1;
             if (!car.retired && room.startTime != null && car.lap >= room.totalLaps) {
@@ -352,13 +457,13 @@ let GameService = class GameService {
             }
         }
     }
-    updateCheckpointProgress(car) {
+    updateCheckpointProgress(car, checkpoints) {
         const lastCheckpoint = car.checkpoint;
-        if (lastCheckpoint >= this.CHECKPOINTS.length - 1) {
+        if (lastCheckpoint >= checkpoints.length - 1) {
             return;
         }
         const nextCheckpoint = lastCheckpoint + 1;
-        const cp = this.CHECKPOINTS[nextCheckpoint];
+        const cp = checkpoints[nextCheckpoint];
         const dx = car.position.x - cp.x;
         const dy = car.position.y - cp.y;
         const distSq = dx * dx + dy * dy;
@@ -402,15 +507,16 @@ let GameService = class GameService {
             };
         });
     }
-    checkStartLineCross(prev, curr) {
-        const nx = Math.cos(this.START_LINE_ANGLE);
-        const ny = Math.sin(this.START_LINE_ANGLE);
+    checkStartLineCross(prev, curr, trackName) {
+        const startLine = this.getStartLine(trackName);
+        const nx = Math.cos(startLine.angle);
+        const ny = Math.sin(startLine.angle);
         const tx = -ny;
         const ty = nx;
-        const pxPrev = prev.x - this.START_LINE_X;
-        const pyPrev = prev.y - this.START_LINE_Y;
-        const pxCurr = curr.x - this.START_LINE_X;
-        const pyCurr = curr.y - this.START_LINE_Y;
+        const pxPrev = prev.x - startLine.x;
+        const pyPrev = prev.y - startLine.y;
+        const pxCurr = curr.x - startLine.x;
+        const pyCurr = curr.y - startLine.y;
         const sidePrev = pxPrev * nx + pyPrev * ny;
         const sideCurr = pxCurr * nx + pyCurr * ny;
         if (sidePrev === 0 && sideCurr === 0)
@@ -446,9 +552,10 @@ let GameService = class GameService {
             return this.ACCEL_HIGH;
         }
     }
-    isOnTrack(position) {
+    isOnTrack(position, trackName) {
+        const centerPath = this.trackCenterPaths.get(trackName) || this.trackCenterPaths.get('basic-circuit');
         let minDistSq = Infinity;
-        for (const point of this.TRACK_CENTER_PATH) {
+        for (const point of centerPath) {
             const dx = position.x - point.x;
             const dy = position.y - point.y;
             const distSq = dx * dx + dy * dy;

@@ -7,6 +7,18 @@ class Renderer {
     // 카메라 오프셋 (월드 좌표에서 화면 좌표로 변환)
     this.cameraX = 0;
     this.cameraY = 0;
+    // 현재 트랙 (기본값: basic-circuit)
+    this.currentTrack = Track;
+  }
+  
+  // 현재 트랙 설정
+  setTrack(trackId) {
+    const track = getTrack(trackId);
+    if (track && track !== this.currentTrack) {
+      this.currentTrack = track;
+      // 트랙 변경 시 캐시된 경로 초기화
+      this.smoothPath = null;
+    }
   }
   
   // 카메라 위치 설정 (플레이어 위치를 화면 중앙에 오도록)
@@ -29,13 +41,13 @@ class Renderer {
     this.ctx.translate(-this.cameraX, -this.cameraY);
     
     // 잔디 배경 (트랙 전체 크기에 맞춰 확장)
-    const gradient = this.ctx.createLinearGradient(0, 0, 0, Track.height);
+    const gradient = this.ctx.createLinearGradient(0, 0, 0, this.currentTrack.height);
     gradient.addColorStop(0, '#2d5a27');
     gradient.addColorStop(0.5, '#1e4620');
     gradient.addColorStop(1, '#2d5a27');
     
     this.ctx.fillStyle = gradient;
-    this.ctx.fillRect(0, 0, Track.width, Track.height);
+    this.ctx.fillRect(0, 0, this.currentTrack.width, this.currentTrack.height);
     
     // 잔디 텍스처 패턴
     this.drawGrassPattern();
@@ -46,10 +58,10 @@ class Renderer {
   drawGrassPattern() {
     this.ctx.fillStyle = 'rgba(0, 0, 0, 0.1)';
     // 트랙 크기에 비례하여 패턴 수 증가
-    const patternCount = Math.floor((Track.width * Track.height) / 4800);
+    const patternCount = Math.floor((this.currentTrack.width * this.currentTrack.height) / 4800);
     for (let i = 0; i < patternCount; i++) {
-      const x = Math.random() * Track.width;
-      const y = Math.random() * Track.height;
+      const x = Math.random() * this.currentTrack.width;
+      const y = Math.random() * this.currentTrack.height;
       this.ctx.fillRect(x, y, 2, 2);
     }
   }
@@ -63,25 +75,25 @@ class Renderer {
     
     // 부드러운 트랙 경로 캐시
     if (!this.smoothPath) {
-      this.smoothPath = Track.getSmoothPath(200);
+      this.smoothPath = this.currentTrack.getSmoothPath(200);
     }
     
     // 트랙 외곽선 (진한 회색 테두리)
     ctx.strokeStyle = '#333';
-    ctx.lineWidth = Track.trackWidth + 20;
+    ctx.lineWidth = this.currentTrack.trackWidth + 20;
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
     this.drawPath(this.smoothPath);
     ctx.stroke();
     
     // 트랙 본체 (아스팔트)
-    const trackGradient = ctx.createLinearGradient(0, 0, Track.width, Track.height);
+    const trackGradient = ctx.createLinearGradient(0, 0, this.currentTrack.width, this.currentTrack.height);
     trackGradient.addColorStop(0, '#3d3d3d');
     trackGradient.addColorStop(0.5, '#4a4a4a');
     trackGradient.addColorStop(1, '#3d3d3d');
     
     ctx.strokeStyle = trackGradient;
-    ctx.lineWidth = Track.trackWidth;
+    ctx.lineWidth = this.currentTrack.trackWidth;
     this.drawPath(this.smoothPath);
     ctx.stroke();
     
@@ -120,7 +132,7 @@ class Renderer {
   drawCurbs() {
     const ctx = this.ctx;
     
-    Track.curbs.forEach(curb => {
+    this.currentTrack.curbs.forEach(curb => {
       ctx.save();
       // 카메라 오프셋은 이미 적용되어 있음
       ctx.translate(curb.x, curb.y);
@@ -146,7 +158,7 @@ class Renderer {
   
   drawStartLine() {
     const ctx = this.ctx;
-    const startLine = Track.startLine;
+    const startLine = this.currentTrack.startLine;
     
     ctx.save();
     // 카메라 오프셋은 이미 적용되어 있음
@@ -158,7 +170,7 @@ class Renderer {
     // 체커 플래그 패턴 (트랙 폭과 동일한 길이)
     const rows = 2;
     const cols = 8;
-    const lineLength = Track.trackWidth;
+    const lineLength = this.currentTrack.trackWidth;
     const squareSize = lineLength / cols;
     
     for (let row = 0; row < rows; row++) {
@@ -179,7 +191,7 @@ class Renderer {
   drawCheckpoints() {
     const ctx = this.ctx;
     
-    Track.checkpoints.forEach((cp, index) => {
+    this.currentTrack.checkpoints.forEach((cp, index) => {
       ctx.beginPath();
       ctx.arc(cp.x, cp.y, 30, 0, Math.PI * 2);
       ctx.fillStyle = 'rgba(0, 255, 0, 0.3)';
@@ -926,7 +938,7 @@ class Renderer {
     const mapWidth = 150;
     const mapHeight = 100;
 
-    const path = Track.centerPath;
+    const path = this.currentTrack.centerPath;
 
     // 트랙 실제 경계를 기준으로 스케일/위치 계산 (찌그러짐 방지)
     let minX = Infinity;

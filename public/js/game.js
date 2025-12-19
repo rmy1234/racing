@@ -484,6 +484,12 @@ class Game {
     countdownEl.classList.add('hidden');
     
     this.currentRoom = room;
+    
+    // 트랙 설정 (방에서 선택된 트랙 사용)
+    if (room.trackName) {
+      this.renderer.setTrack(room.trackName);
+    }
+    
     this.startGameLoop();
   }
   

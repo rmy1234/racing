@@ -155,7 +155,20 @@
   </div>
 
   <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+  <!-- 트랙 관리 파일 먼저 로드 -->
   <script src="/js/track.js"></script>
+  <!-- 각 트랙 데이터 파일 로드 (자동으로 등록됨) -->
+  <script src="/js/tracks/basic-circuit.js"></script>
+  <script src="/js/tracks/monza.js"></script>
+  <!-- 기본 트랙 초기화 -->
+  <script>
+    // 기본 트랙 초기화
+    initializeDefaultTrack();
+    // Track 전역 변수 설정 (기존 코드 호환성)
+    if (Track === null) {
+      Track = getTrack('basic-circuit');
+    }
+  </script>
   <script src="/js/renderer.js"></script>
   <script src="/js/network.js"></script>
   <script src="/js/game.js"></script>
