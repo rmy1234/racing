@@ -74,7 +74,7 @@ let GameGateway = class GameGateway {
         client.emit('roomList', rooms);
     }
     handleCreateRoom(client, data) {
-        const room = this.gameService.createRoom(client.id, data.nickname, data.roomName, data.carSkin ?? null);
+        const room = this.gameService.createRoom(client.id, data.nickname, data.roomName, data.carSkin ?? null, data.trackId ?? 'basic-circuit');
         client.join(room.id);
         client.emit('roomCreated', this.gameService.serializeRoom(room));
         this.server.emit('roomListUpdated', this.gameService.getWaitingRooms());

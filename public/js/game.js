@@ -10,6 +10,7 @@ class Game {
     this.localPlayerId = null;
     this.nickname = '';
     this.carColor = { r: 45, g: 108, b: 232 }; // 기본 색상 (파란색) - #2d6ce8
+    this.selectedTrackId = 'basic-circuit'; // 기본 트랙
 
     this.gameState = null;
     this.input = {
@@ -49,6 +50,9 @@ class Game {
       // 색상 선택 UI 초기화
       this.setupColorPicker();
       
+      // 트랙 선택 UI 초기화
+      this.setupTrackSelector();
+      
       console.log('Game initialized');
     } catch (error) {
       console.error('Failed to initialize game:', error);
@@ -56,6 +60,94 @@ class Game {
     }
   }
   
+  // 트랙 선택 UI 설정
+  setupTrackSelector() {
+    const trackDropdown = document.getElementById('trackDropdown');
+    const trackDropdownSelected = document.getElementById('trackDropdownSelected');
+    const trackDropdownOptions = document.getElementById('trackDropdownOptions');
+    const trackDropdownText = document.getElementById('trackDropdownText');
+    const trackSelect = document.getElementById('trackSelect');
+    
+    if (!trackDropdown || !trackDropdownSelected || !trackDropdownOptions || !trackDropdownText) {
+      return;
+    }
+
+    // 사용 가능한 트랙 목록 가져오기
+    const tracks = getAvailableTracks();
+    
+    // 숨겨진 select에도 옵션 추가 (호환성)
+    if (trackSelect) {
+      tracks.forEach(track => {
+        const option = document.createElement('option');
+        option.value = track.id;
+        option.textContent = track.name;
+        trackSelect.appendChild(option);
+      });
+      trackSelect.value = this.selectedTrackId;
+    }
+    
+    // 커스텀 드롭다운 옵션 생성
+    tracks.forEach(track => {
+      const option = document.createElement('div');
+      option.className = 'custom-dropdown-option';
+      option.dataset.value = track.id;
+      option.textContent = track.name;
+      
+      // 옵션 클릭 이벤트
+      option.addEventListener('click', () => {
+        this.selectedTrackId = track.id;
+        trackDropdownText.textContent = track.name;
+        trackDropdown.classList.remove('open');
+        
+        // 선택된 옵션 표시 업데이트
+        trackDropdownOptions.querySelectorAll('.custom-dropdown-option').forEach(opt => {
+          opt.classList.remove('selected');
+        });
+        option.classList.add('selected');
+        
+        // 숨겨진 select도 업데이트
+        if (trackSelect) {
+          trackSelect.value = track.id;
+        }
+      });
+      
+      // 기본 선택된 옵션 표시
+      if (track.id === this.selectedTrackId) {
+        option.classList.add('selected');
+      }
+      
+      trackDropdownOptions.appendChild(option);
+    });
+
+    // 기본값 설정
+    const defaultTrack = tracks.find(t => t.id === this.selectedTrackId) || tracks[0];
+    if (defaultTrack) {
+      trackDropdownText.textContent = defaultTrack.name;
+      this.selectedTrackId = defaultTrack.id;
+    }
+
+    // 드롭다운 열기/닫기
+    trackDropdownSelected.addEventListener('click', (e) => {
+      e.stopPropagation();
+      trackDropdown.classList.toggle('open');
+    });
+
+    // 외부 클릭 시 닫기
+    document.addEventListener('click', (e) => {
+      if (!trackDropdown.contains(e.target)) {
+        trackDropdown.classList.remove('open');
+      }
+    });
+
+    // 키보드 접근성 (ESC로 닫기)
+    trackDropdownSelected.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        trackDropdown.classList.toggle('open');
+      }
+    });
+  }
+
   // 색상 선택 UI 설정
   setupColorPicker() {
     const colorPicker = document.getElementById('carColorPicker');
@@ -154,7 +246,7 @@ class Game {
       const roomName = `${this.nickname}의 레이스`;
       // RGB 색상을 JSON 문자열로 변환하여 전달
       const carColorStr = JSON.stringify(this.carColor);
-      this.network.createRoom(this.nickname, roomName, carColorStr);
+      this.network.createRoom(this.nickname, roomName, carColorStr, this.selectedTrackId);
     });
     
     // 새로고침 버튼

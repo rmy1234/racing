@@ -94,13 +94,14 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect, On
   @SubscribeMessage('createRoom')
   handleCreateRoom(
     @ConnectedSocket() client: Socket,
-    @MessageBody() data: { nickname: string; roomName: string; carSkin?: string | null },
+    @MessageBody() data: { nickname: string; roomName: string; carSkin?: string | null; trackId?: string },
   ): void {
     const room = this.gameService.createRoom(
       client.id,
       data.nickname,
       data.roomName,
       data.carSkin ?? null,
+      data.trackId ?? 'basic-circuit',
     );
     client.join(room.id);
     client.emit('roomCreated', this.gameService.serializeRoom(room));

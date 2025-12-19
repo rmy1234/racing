@@ -24,6 +24,28 @@
           <input type="text" id="nickname" placeholder="닉네임 입력..." maxlength="12">
         </div>
 
+        <div class="track-select-section">
+          <h2>트랙 선택</h2>
+          <div class="track-selector">
+            <label for="trackSelect" class="track-label">트랙</label>
+            <div class="custom-dropdown" id="trackDropdown">
+              <div class="custom-dropdown-selected" id="trackDropdownSelected">
+                <span id="trackDropdownText">기본 서킷</span>
+                <svg class="dropdown-arrow" width="16" height="16" viewBox="0 0 16 16" fill="none">
+                  <path d="M8 11L3 6H13L8 11Z" fill="#00d4ff"/>
+                </svg>
+              </div>
+              <div class="custom-dropdown-options" id="trackDropdownOptions">
+                <!-- 옵션은 JavaScript에서 동적으로 추가 -->
+              </div>
+            </div>
+            <!-- 숨겨진 select 요소 (기존 호환성 유지) -->
+            <select id="trackSelect" class="track-select-hidden" style="display: none;">
+              <!-- 트랙 옵션은 JavaScript에서 동적으로 추가 -->
+            </select>
+          </div>
+        </div>
+
         <div class="car-customize-section">
           <h2>차량 색상 선택</h2>
           <div class="car-preview-container">

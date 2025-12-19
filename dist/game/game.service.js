@@ -40,7 +40,7 @@ let GameService = class GameService {
     DOWNFORCE_COEFF = 0.004;
     STEERING_RESPONSE_SPEED = 3.5;
     STEERING_CENTERING_SPEED = 40.0;
-    createRoom(hostId, hostNickname, roomName, carSkin) {
+    createRoom(hostId, hostNickname, roomName, carSkin, trackId) {
         const roomId = this.generateRoomId();
         const room = {
             id: roomId,
@@ -48,7 +48,7 @@ let GameService = class GameService {
             host: hostId,
             players: new Map(),
             status: 'waiting',
-            trackName: 'rounded-rectangle-circuit',
+            trackName: trackId ?? 'basic-circuit',
             totalLaps: 5,
             startTime: null,
             maxPlayers: 8,

@@ -18,6 +18,7 @@ export declare class GameGateway implements OnGatewayConnection, OnGatewayDiscon
         nickname: string;
         roomName: string;
         carSkin?: string | null;
+        trackId?: string;
     }): void;
     handleJoinRoom(client: Socket, data: {
         roomId: string;

@@ -65,7 +65,7 @@ export declare class GameService {
     private readonly DOWNFORCE_COEFF;
     private readonly STEERING_RESPONSE_SPEED;
     private readonly STEERING_CENTERING_SPEED;
-    createRoom(hostId: string, hostNickname: string, roomName: string, carSkin?: string | null): GameRoom;
+    createRoom(hostId: string, hostNickname: string, roomName: string, carSkin?: string | null, trackId?: string): GameRoom;
     private buildTrackCenterPath;
     joinRoom(roomId: string, playerId: string, nickname: string, carSkin?: string | null): GameRoom | null;
     private addPlayerToRoom;

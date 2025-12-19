@@ -161,7 +161,7 @@ export class GameService {
 
 
 
-  createRoom(hostId: string, hostNickname: string, roomName: string, carSkin?: string | null): GameRoom {
+  createRoom(hostId: string, hostNickname: string, roomName: string, carSkin?: string | null, trackId?: string): GameRoom {
     const roomId = this.generateRoomId();
     const room: GameRoom = {
       id: roomId,
@@ -169,7 +169,7 @@ export class GameService {
       host: hostId,
       players: new Map(),
       status: 'waiting',
-      trackName: 'rounded-rectangle-circuit',
+      trackName: trackId ?? 'basic-circuit',
       totalLaps: 5,
       startTime: null,
       maxPlayers: 8,

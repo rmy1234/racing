@@ -1,8 +1,18 @@
+// 트랙 목록 정의
+const TRACKS = {
+  'basic-circuit': {
+    id: 'basic-circuit',
+    name: '기본 서킷',
+    data: null // 아래 Track 객체를 참조
+  }
+};
+
 // 라운드 사각형 서킷 트랙 데이터
 // 단순한 둥근 사각형 형태의 트랙
 
 const Track = {
-  name: 'Rounded Rectangle Circuit',
+  name: '기본 서킷',
+  id: 'basic-circuit',
   width: 2400,
   height: 1600,
   
@@ -280,4 +290,25 @@ const Track = {
 Track.getSmoothPath = function () {
   return this.centerPath;
 };
+
+// 트랙 목록에 현재 트랙 데이터 연결
+TRACKS['basic-circuit'].data = Track;
+
+// 현재 선택된 트랙을 가져오는 함수
+function getTrack(trackId) {
+  const trackInfo = TRACKS[trackId];
+  if (!trackInfo || !trackInfo.data) {
+    // 기본값으로 기본 서킷 반환
+    return TRACKS['basic-circuit'].data;
+  }
+  return trackInfo.data;
+}
+
+// 사용 가능한 모든 트랙 목록 반환
+function getAvailableTracks() {
+  return Object.values(TRACKS).map(track => ({
+    id: track.id,
+    name: track.name
+  }));
+}
 
