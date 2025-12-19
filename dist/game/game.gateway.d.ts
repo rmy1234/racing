@@ -17,10 +17,12 @@ export declare class GameGateway implements OnGatewayConnection, OnGatewayDiscon
     handleCreateRoom(client: Socket, data: {
         nickname: string;
         roomName: string;
+        carSkin?: string | null;
     }): void;
     handleJoinRoom(client: Socket, data: {
         roomId: string;
         nickname: string;
+        carSkin?: string | null;
     }): void;
     handleLeaveRoom(client: Socket): void;
     handleStartGame(client: Socket): void;

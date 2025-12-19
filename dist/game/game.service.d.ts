@@ -9,6 +9,7 @@ export interface CarState {
     velocity: Vector2D;
     angle: number;
     speed: number;
+    steerAngle: number;
     input: {
         up: boolean;
         down: boolean;
@@ -17,12 +18,12 @@ export interface CarState {
     };
     lap: number;
     checkpoint: number;
-    bestLapTime: number | null;
-    currentLapTime: number;
     finished: boolean;
     retired: boolean;
     finishTime: number | null;
     retiredAt: number | null;
+    carSkin?: string | null;
+    angularVelocity: number;
 }
 export interface GameRoom {
     id: string;
@@ -47,20 +48,24 @@ export declare class GameService {
     private readonly ACCELERATION_OFF_TRACK;
     private readonly BRAKE_POWER;
     private readonly FRICTION;
-    private readonly TURN_SPEED;
-    private readonly DRIFT_FACTOR;
     private readonly PIXELS_PER_METER;
     private readonly TRACK_WIDTH_PX;
     private readonly TRACK_CENTER_PATH;
+    private readonly MAX_STEER_ANGLE;
+    private readonly WHEEL_BASE_METERS;
     private readonly CHECKPOINTS;
     private readonly CHECKPOINT_RADIUS;
     private readonly START_LINE_X;
     private readonly START_LINE_Y;
     private readonly START_LINE_ANGLE;
     private readonly START_LINE_HALF_LENGTH;
-    createRoom(hostId: string, hostNickname: string, roomName: string): GameRoom;
+    private readonly BASE_LATERAL_GRIP;
+    private readonly DOWNFORCE_COEFF;
+    private readonly STEERING_RESPONSE_SPEED;
+    private readonly STEERING_CENTERING_SPEED;
+    createRoom(hostId: string, hostNickname: string, roomName: string, carSkin?: string | null): GameRoom;
     private buildTrackCenterPath;
-    joinRoom(roomId: string, playerId: string, nickname: string): GameRoom | null;
+    joinRoom(roomId: string, playerId: string, nickname: string, carSkin?: string | null): GameRoom | null;
     private addPlayerToRoom;
     private getSpawnPositions;
     leaveRoom(playerId: string): {

@@ -9,7 +9,7 @@ class Game {
     this.currentRoom = null;
     this.localPlayerId = null;
     this.nickname = '';
-    
+
     this.gameState = null;
     this.input = {
       up: false,

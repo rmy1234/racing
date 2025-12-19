@@ -11,19 +11,19 @@ const common_1 = require("@nestjs/common");
 let GameService = class GameService {
     rooms = new Map();
     playerRooms = new Map();
-    MAX_SPEED = 150;
-    MAX_SPEED_OFF_TRACK = 50;
+    MAX_SPEED = 300;
+    MAX_SPEED_OFF_TRACK = 80;
     MAX_REVERSE_SPEED = 30;
     ZERO_TO_HUNDRED_TIME = 2.5;
     ACCELERATION = 100 / this.ZERO_TO_HUNDRED_TIME;
     ACCELERATION_OFF_TRACK = this.ACCELERATION * 0.35;
     BRAKE_POWER = 80;
     FRICTION = 40;
-    TURN_SPEED = Math.PI;
-    DRIFT_FACTOR = 0.85;
     PIXELS_PER_METER = 6;
     TRACK_WIDTH_PX = 90;
     TRACK_CENTER_PATH = this.buildTrackCenterPath();
+    MAX_STEER_ANGLE = Math.PI / 6;
+    WHEEL_BASE_METERS = 3.0;
     CHECKPOINTS = [
         { x: 930, y: 420 },
         { x: 600, y: 210 },
@@ -34,7 +34,11 @@ let GameService = class GameService {
     START_LINE_Y = 620;
     START_LINE_ANGLE = 0;
     START_LINE_HALF_LENGTH = 45;
-    createRoom(hostId, hostNickname, roomName) {
+    BASE_LATERAL_GRIP = 12.0;
+    DOWNFORCE_COEFF = 0.004;
+    STEERING_RESPONSE_SPEED = 3.5;
+    STEERING_CENTERING_SPEED = 30.0;
+    createRoom(hostId, hostNickname, roomName, carSkin) {
         const roomId = this.generateRoomId();
         const room = {
             id: roomId,
@@ -43,12 +47,12 @@ let GameService = class GameService {
             players: new Map(),
             status: 'waiting',
             trackName: 'rounded-rectangle-circuit',
-            totalLaps: 3,
+            totalLaps: 5,
             startTime: null,
             maxPlayers: 8,
             lastUpdateTime: null,
         };
-        this.addPlayerToRoom(room, hostId, hostNickname, 0);
+        this.addPlayerToRoom(room, hostId, hostNickname, 0, carSkin);
         this.rooms.set(roomId, room);
         this.playerRooms.set(hostId, roomId);
         return room;
@@ -107,7 +111,7 @@ let GameService = class GameService {
         addStraight(brBottom.x, brBottom.y, blBottom.x, blBottom.y);
         return points;
     }
-    joinRoom(roomId, playerId, nickname) {
+    joinRoom(roomId, playerId, nickname, carSkin) {
         const room = this.rooms.get(roomId);
         if (!room)
             return null;
@@ -116,11 +120,11 @@ let GameService = class GameService {
         if (room.players.size >= room.maxPlayers)
             return null;
         const spawnIndex = room.players.size;
-        this.addPlayerToRoom(room, playerId, nickname, spawnIndex);
+        this.addPlayerToRoom(room, playerId, nickname, spawnIndex, carSkin);
         this.playerRooms.set(playerId, roomId);
         return room;
     }
-    addPlayerToRoom(room, playerId, nickname, spawnIndex) {
+    addPlayerToRoom(room, playerId, nickname, spawnIndex, carSkin) {
         const spawnPositions = this.getSpawnPositions();
         const spawnPos = spawnPositions[spawnIndex % spawnPositions.length];
         const carState = {
@@ -130,6 +134,7 @@ let GameService = class GameService {
             velocity: { x: 0, y: 0 },
             angle: 0,
             speed: 0,
+            steerAngle: 0,
             input: {
                 up: false,
                 down: false,
@@ -138,12 +143,12 @@ let GameService = class GameService {
             },
             lap: 0,
             checkpoint: -1,
-            bestLapTime: null,
-            currentLapTime: 0,
             finished: false,
             retired: false,
             finishTime: null,
             retiredAt: null,
+            carSkin: carSkin ?? null,
+            angularVelocity: 0,
         };
         room.players.set(playerId, carState);
     }
@@ -227,10 +232,10 @@ let GameService = class GameService {
         room.startTime = Date.now();
         room.lastUpdateTime = room.startTime;
         room.players.forEach(car => {
-            car.currentLapTime = 0;
             car.lap = 0;
             car.checkpoint = -1;
             car.speed = 0;
+            car.steerAngle = 0;
             car.velocity = { x: 0, y: 0 };
             car.input = { up: false, down: false, left: false, right: false };
             car.finished = false;
@@ -260,7 +265,7 @@ let GameService = class GameService {
         return results ? { results } : null;
     }
     updateCarPhysics(room, car, input, deltaTime) {
-        const prevPosition = { x: car.position.x, y: car.position.y };
+        const prevPosition = { ...car.position };
         const onTrack = this.isOnTrack(car.position);
         const accel = onTrack ? this.ACCELERATION : this.ACCELERATION_OFF_TRACK;
         const maxForwardSpeed = onTrack ? this.MAX_SPEED : this.MAX_SPEED_OFF_TRACK;
@@ -283,33 +288,49 @@ let GameService = class GameService {
                 car.speed = Math.min(0, car.speed + this.FRICTION * deltaTime);
             }
         }
-        if (car.speed > maxForwardSpeed) {
-            car.speed = maxForwardSpeed;
+        car.speed = Math.min(car.speed, maxForwardSpeed);
+        car.speed = Math.max(car.speed, -this.MAX_REVERSE_SPEED);
+        let targetSteer = 0;
+        if (input.left && !input.right)
+            targetSteer = -this.MAX_STEER_ANGLE;
+        else if (input.right && !input.left)
+            targetSteer = this.MAX_STEER_ANGLE;
+        const visualSpeedRatio = Math.min(1, Math.abs(car.speed) / (this.MAX_SPEED * 0.7));
+        targetSteer *= 0.65 + 0.30 * visualSpeedRatio;
+        const steerInertia = 1 / (1 + Math.abs(car.speed) * 0.025);
+        const isInputActive = input.left || input.right;
+        const steeringSpeed = isInputActive
+            ? this.STEERING_RESPONSE_SPEED
+            : this.STEERING_CENTERING_SPEED;
+        car.steerAngle +=
+            (targetSteer - car.steerAngle) *
+                Math.min(1, steeringSpeed * steerInertia * deltaTime);
+        const speedMps = car.speed / 3.6;
+        const pixelsPerSecond = speedMps * this.PIXELS_PER_METER;
+        const frontWheelAngle = car.angle + car.steerAngle;
+        const frontVelX = pixelsPerSecond * Math.cos(frontWheelAngle);
+        const frontVelY = pixelsPerSecond * Math.sin(frontWheelAngle);
+        const rearVelX = pixelsPerSecond * Math.cos(car.angle);
+        const rearVelY = pixelsPerSecond * Math.sin(car.angle);
+        const targetVelX = (frontVelX + rearVelX) / 2;
+        const targetVelY = (frontVelY + rearVelY) / 2;
+        const speedAbs = Math.abs(pixelsPerSecond);
+        const downforce = speedAbs * speedAbs * this.DOWNFORCE_COEFF;
+        const totalGrip = this.BASE_LATERAL_GRIP + downforce;
+        const gripFactor = Math.min(1, totalGrip * deltaTime);
+        car.velocity.x += (targetVelX - car.velocity.x) * gripFactor;
+        car.velocity.y += (targetVelY - car.velocity.y) * gripFactor;
+        let angularVelocity = 0;
+        if (Math.abs(car.steerAngle) > 0.0001 && Math.abs(pixelsPerSecond) > 0.1) {
+            const wheelBasePixels = this.WHEEL_BASE_METERS * this.PIXELS_PER_METER;
+            angularVelocity = (pixelsPerSecond / wheelBasePixels) * Math.sin(car.steerAngle);
         }
-        if (car.speed < -this.MAX_REVERSE_SPEED) {
-            car.speed = -this.MAX_REVERSE_SPEED;
-        }
-        const baseTurnFactor = 0.7;
-        const effectiveSpeed = Math.max(30, Math.abs(car.speed));
-        const speedRatio = Math.min(1, effectiveSpeed / this.MAX_SPEED);
-        const turnAmount = this.TURN_SPEED * (baseTurnFactor + speedRatio) * deltaTime;
-        if (input.left) {
-            car.angle -= turnAmount;
-        }
-        if (input.right) {
-            car.angle += turnAmount;
-        }
-        const speedMetersPerSecond = car.speed / 3.6;
-        const pixelsPerSecond = speedMetersPerSecond * this.PIXELS_PER_METER;
-        const targetVelX = Math.cos(car.angle) * pixelsPerSecond;
-        const targetVelY = Math.sin(car.angle) * pixelsPerSecond;
-        car.velocity.x = car.velocity.x * this.DRIFT_FACTOR + targetVelX * (1 - this.DRIFT_FACTOR);
-        car.velocity.y = car.velocity.y * this.DRIFT_FACTOR + targetVelY * (1 - this.DRIFT_FACTOR);
+        car.angle += angularVelocity * deltaTime;
+        car.angularVelocity = angularVelocity;
         car.position.x += car.velocity.x * deltaTime;
         car.position.y += car.velocity.y * deltaTime;
-        if (Math.abs(car.speed) < 0.1) {
+        if (Math.abs(car.speed) < 0.1)
             car.speed = 0;
-        }
         this.updateCheckpointProgress(car);
         const crossDir = this.checkStartLineCross(prevPosition, car.position);
         if (crossDir === 'forward' && car.checkpoint === this.CHECKPOINTS.length - 1) {
@@ -317,8 +338,7 @@ let GameService = class GameService {
             car.checkpoint = -1;
             if (!car.retired && room.startTime != null && car.lap >= room.totalLaps) {
                 car.finished = true;
-                const elapsed = Date.now() - room.startTime;
-                car.finishTime = elapsed;
+                car.finishTime = Date.now() - room.startTime;
             }
         }
     }

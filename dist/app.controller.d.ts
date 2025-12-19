@@ -5,4 +5,8 @@ export declare class AppController {
     getHealth(): {
         status: string;
     };
+    getCars(): Promise<{
+        id: string;
+        url: string;
+    }[]>;
 }

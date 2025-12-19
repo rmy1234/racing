@@ -74,13 +74,13 @@ let GameGateway = class GameGateway {
         client.emit('roomList', rooms);
     }
     handleCreateRoom(client, data) {
-        const room = this.gameService.createRoom(client.id, data.nickname, data.roomName);
+        const room = this.gameService.createRoom(client.id, data.nickname, data.roomName, data.carSkin ?? null);
         client.join(room.id);
         client.emit('roomCreated', this.gameService.serializeRoom(room));
         this.server.emit('roomListUpdated', this.gameService.getWaitingRooms());
     }
     handleJoinRoom(client, data) {
-        const room = this.gameService.joinRoom(data.roomId, client.id, data.nickname);
+        const room = this.gameService.joinRoom(data.roomId, client.id, data.nickname, data.carSkin ?? null);
         if (room) {
             client.join(room.id);
             client.emit('roomJoined', this.gameService.serializeRoom(room));

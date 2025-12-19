@@ -94,9 +94,14 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect, On
   @SubscribeMessage('createRoom')
   handleCreateRoom(
     @ConnectedSocket() client: Socket,
-    @MessageBody() data: { nickname: string; roomName: string },
+    @MessageBody() data: { nickname: string; roomName: string; carSkin?: string | null },
   ): void {
-    const room = this.gameService.createRoom(client.id, data.nickname, data.roomName);
+    const room = this.gameService.createRoom(
+      client.id,
+      data.nickname,
+      data.roomName,
+      data.carSkin ?? null,
+    );
     client.join(room.id);
     client.emit('roomCreated', this.gameService.serializeRoom(room));
     
@@ -107,9 +112,14 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect, On
   @SubscribeMessage('joinRoom')
   handleJoinRoom(
     @ConnectedSocket() client: Socket,
-    @MessageBody() data: { roomId: string; nickname: string },
+    @MessageBody() data: { roomId: string; nickname: string; carSkin?: string | null },
   ): void {
-    const room = this.gameService.joinRoom(data.roomId, client.id, data.nickname);
+    const room = this.gameService.joinRoom(
+      data.roomId,
+      client.id,
+      data.nickname,
+      data.carSkin ?? null,
+    );
 
     if (room) {
       client.join(room.id);

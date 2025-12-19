@@ -13,6 +13,8 @@ export interface CarState {
   angle: number;
   // km/h 단위 속도 (전진: 양수, 후진: 음수)
   speed: number;
+  // 앞바퀴 조향 각도(rad) - 클라이언트에서 바퀴 애니메이션에 사용
+  steerAngle: number;
   // 현재 입력 상태 (서버 틱마다 참고)
   input: {
     up: boolean;
@@ -22,8 +24,6 @@ export interface CarState {
   };
   lap: number;
   checkpoint: number;
-  bestLapTime: number | null;
-  currentLapTime: number;
   finished: boolean;
   // 레이스 완주/리타이어 여부
   retired: boolean;
@@ -31,6 +31,10 @@ export interface CarState {
   finishTime: number | null;
   // 리타이어 시점 (레이스 시작으로부터 ms)
   retiredAt: number | null;
+  // 차량 스킨 파일 이름 (예: 'racingCar.png')
+  carSkin?: string | null;
+  angularVelocity: number;
+
 }
 
 export interface GameRoom {
@@ -53,19 +57,36 @@ export class GameService {
 
   // 차량 물리 상수 (km/h, 초 기준)
   // 0 -> 100km/h 를 약 2.5초에 도달시키기 위한 가속도
-  private readonly MAX_SPEED = 150; // km/h
-  private readonly MAX_SPEED_OFF_TRACK = 50; // 트랙 밖 최대 속도 (느리게)
+  private readonly MAX_SPEED = 300; // km/h
+  private readonly MAX_SPEED_OFF_TRACK = 80; // 트랙 밖 최대 속도 (느리게)
   private readonly MAX_REVERSE_SPEED = 30; // km/h
   private readonly ZERO_TO_HUNDRED_TIME = 2.5; // 초
   private readonly ACCELERATION = 100 / this.ZERO_TO_HUNDRED_TIME; // km/h per second (≈ 40)
   private readonly ACCELERATION_OFF_TRACK = this.ACCELERATION * 0.35; // 트랙 밖 가속도 (느리게)
   private readonly BRAKE_POWER = 80; // 브레이크 감속 km/h per second
   private readonly FRICTION = 40; // 자연 감속 km/h per second (가속 버튼에서 손 떼면 더 빨리 감속)
-  private readonly TURN_SPEED = Math.PI; // 최대 속도에서의 기본 회전 속도(rad/s)
-  private readonly DRIFT_FACTOR = 0.85;
   private readonly PIXELS_PER_METER = 6; // 1m를 몇 px로 볼지
   private readonly TRACK_WIDTH_PX = 90; // 트랙 폭 (Track.trackWidth와 동일)
+  // 트랙 중앙선 경로 (둥근 사각형 서킷의 중심선 좌표 배열)
+  // - buildTrackCenterPath() 메서드로 동적 생성
+  // - 트랙 안/밖 판정(isOnTrack)에 사용
+  // - 클라이언트 Track.centerPath와 동일한 경로
   private readonly TRACK_CENTER_PATH: Vector2D[] = this.buildTrackCenterPath();
+  // ========================================
+  // 🏎️ F1 조향 시스템 파라미터
+  // ========================================
+  
+  // 앞바퀴 최대 조향각 (라디안)
+  // - 실제 F1: 약 20~30도
+  // - 값이 클수록 급격한 회전 가능, 작을수록 안정적
+  // - 현재: 30도 (Math.PI / 6 ≈ 0.524 rad)
+  private readonly MAX_STEER_ANGLE = Math.PI / 6;
+  
+  // 휠베이스(앞/뒤 바퀴 간 거리)
+  // - 실제 F1: 약 3.0~3.6m
+  // - 값이 클수록 회전 반경이 커짐 (안정적이지만 느린 회전)
+  // - 현재: 3.0m
+  private readonly WHEEL_BASE_METERS = 3.0;
 
   // 클라이언트 Track.checkpoints 와 동일한 체크포인트 (시계 방향)
   // 랩 판정에는 "하단 스타트 근처"는 제외하고, 우/상/좌 3개만 사용
@@ -77,12 +98,50 @@ export class GameService {
   private readonly CHECKPOINT_RADIUS = 90; // 체크포인트 판정 반경
 
   // 스타트/피니시 라인 (Track.startLine 과 동일한 좌표/각도 사용)
+  // 스타트 라인 중심점 X 좌표 (픽셀)
+  // - 트랙 하단 중앙에 위치
   private readonly START_LINE_X = 600;
+  // 스타트 라인 중심점 Y 좌표 (픽셀)
+  // - 트랙 하단 중앙에 위치
   private readonly START_LINE_Y = 620;
   private readonly START_LINE_ANGLE = 0; // 진행 방향(→)
   private readonly START_LINE_HALF_LENGTH = 45; // 트랙 폭 90 기준 절반
+  // ========================================
+  // 🏎️ F1 그립 & 다운포스 시스템
+  // ========================================
+  
+  // 기본 횡방향 그립 (타이어 컴파운드)
+  // - 값이 클수록 미끄러짐 감소, 차가 목표 방향으로 빠르게 수렴
+  // - 실제 F1: 소프트 타이어(높은 그립) vs 하드 타이어(낮은 그립)
+  // - 현재: 12.0 (높은 그립 - 미끄러짐 최소화)
+  private readonly BASE_LATERAL_GRIP = 12.0;
+  
+  // 다운포스 계수 (속도²에 비례)
+  // - 속도가 빠를수록 차체가 지면에 눌려 그립 증가
+  // - 실제 F1: 고속 코너에서 다운포스로 안정성 확보
+  // - 현재: 0.004 (고속에서 강력한 다운포스)
+  private readonly DOWNFORCE_COEFF = 0.004;
+  
+  // ========================================
+  // 🏎️ F1 조향 반응성 파라미터
+  // ========================================
+  
+  // 조향 입력 속도 (초당 조향각 변화율)
+  // - 값이 클수록 핸들이 빠르게 움직임 (가벼움)
+  // - 값이 작을수록 핸들이 천천히 움직임 (무거움)
+  // - 실제 F1: 파워 스티어링이지만 정밀한 피드백을 위해 적당한 무게감
+  // - 현재: 3.0 (무거운 F1 핸들 느낌)
+  private readonly STEERING_RESPONSE_SPEED = 3.5;
+  
+  // 조향 센터링 속도 (손을 뗐을 때 핸들이 중앙으로 복귀하는 속도)
+  // - 실제 F1: 파워 스티어링의 센터링 포스로 핸들이 자동으로 중앙 복귀
+  // - 값이 클수록 빠르게 중앙으로 돌아감
+  // - 현재: 20.0 (매우 빠른 센터링 - 손 떼면 즉시 직진)
+  private readonly STEERING_CENTERING_SPEED = 30.0;
 
-  createRoom(hostId: string, hostNickname: string, roomName: string): GameRoom {
+
+
+  createRoom(hostId: string, hostNickname: string, roomName: string, carSkin?: string | null): GameRoom {
     const roomId = this.generateRoomId();
     const room: GameRoom = {
       id: roomId,
@@ -91,14 +150,14 @@ export class GameService {
       players: new Map(),
       status: 'waiting',
       trackName: 'rounded-rectangle-circuit',
-      totalLaps: 3,
+      totalLaps: 5,
       startTime: null,
       maxPlayers: 8,
       lastUpdateTime: null,
     };
 
     // 호스트를 방에 추가
-    this.addPlayerToRoom(room, hostId, hostNickname, 0);
+    this.addPlayerToRoom(room, hostId, hostNickname, 0, carSkin);
     this.rooms.set(roomId, room);
     this.playerRooms.set(hostId, roomId);
 
@@ -177,20 +236,26 @@ export class GameService {
     return points;
   }
 
-  joinRoom(roomId: string, playerId: string, nickname: string): GameRoom | null {
+  joinRoom(roomId: string, playerId: string, nickname: string, carSkin?: string | null): GameRoom | null {
     const room = this.rooms.get(roomId);
     if (!room) return null;
     if (room.status !== 'waiting') return null;
     if (room.players.size >= room.maxPlayers) return null;
 
     const spawnIndex = room.players.size;
-    this.addPlayerToRoom(room, playerId, nickname, spawnIndex);
+    this.addPlayerToRoom(room, playerId, nickname, spawnIndex, carSkin);
     this.playerRooms.set(playerId, roomId);
 
     return room;
   }
 
-  private addPlayerToRoom(room: GameRoom, playerId: string, nickname: string, spawnIndex: number): void {
+  private addPlayerToRoom(
+    room: GameRoom,
+    playerId: string,
+    nickname: string,
+    spawnIndex: number,
+    carSkin?: string | null,
+  ): void {
     const spawnPositions = this.getSpawnPositions();
     const spawnPos = spawnPositions[spawnIndex % spawnPositions.length];
 
@@ -202,6 +267,7 @@ export class GameService {
       // 트랙 하단 직선 기준, 진행 방향(오른쪽)을 향하도록 초기 각도 설정
       angle: 0,
       speed: 0,
+      steerAngle: 0,
       input: {
         up: false,
         down: false,
@@ -211,12 +277,12 @@ export class GameService {
       lap: 0,
       // -1: 아직 어떤 체크포인트도 통과하지 않은 상태
       checkpoint: -1,
-      bestLapTime: null,
-      currentLapTime: 0,
       finished: false,
       retired: false,
       finishTime: null,
       retiredAt: null,
+      carSkin: carSkin ?? null,
+      angularVelocity: 0,
     };
 
     room.players.set(playerId, carState);
@@ -321,12 +387,12 @@ export class GameService {
     room.startTime = Date.now();
     room.lastUpdateTime = room.startTime;
 
-    // 모든 플레이어 랩 타임 초기화
+    // 모든 플레이어 상태 초기화
     room.players.forEach(car => {
-      car.currentLapTime = 0;
       car.lap = 0;
       car.checkpoint = -1;
       car.speed = 0;
+      car.steerAngle = 0;
       car.velocity = { x: 0, y: 0 };
       car.input = { up: false, down: false, left: false, right: false };
       car.finished = false;
@@ -370,32 +436,27 @@ export class GameService {
     input: { up: boolean; down: boolean; left: boolean; right: boolean },
     deltaTime: number,
   ): void {
-    // 스타트 라인 통과 방향 판정을 위해 이전 위치 저장
-    const prevPosition: Vector2D = { x: car.position.x, y: car.position.y };
-
-    // 현재 위치가 트랙 위인지 여부 (가속/최고 속도에 영향을 줌)
+    const prevPosition: Vector2D = { ...car.position };
+  
     const onTrack = this.isOnTrack(car.position);
-
     const accel = onTrack ? this.ACCELERATION : this.ACCELERATION_OFF_TRACK;
     const maxForwardSpeed = onTrack ? this.MAX_SPEED : this.MAX_SPEED_OFF_TRACK;
-
-    // 가속 (0 -> 100km/h 약 2.5초, 트랙 밖에서는 느리게)
+  
+    // =========================
+    // 1️⃣ 속도 입력 처리
+    // =========================
     if (input.up) {
       car.speed += accel * deltaTime;
     }
-
-    // 브레이크 / 후진
+  
     if (input.down) {
       if (car.speed > 5) {
-        // 주행 중일 때는 강한 브레이크
         car.speed -= this.BRAKE_POWER * deltaTime;
       } else {
-        // 거의 정지 상태에서는 후진
         car.speed -= accel * deltaTime;
       }
     }
-
-    // 자연 감속 (마찰)
+  
     if (!input.up && !input.down) {
       if (car.speed > 0) {
         car.speed = Math.max(0, car.speed - this.FRICTION * deltaTime);
@@ -403,64 +464,143 @@ export class GameService {
         car.speed = Math.min(0, car.speed + this.FRICTION * deltaTime);
       }
     }
+  
+    car.speed = Math.min(car.speed, maxForwardSpeed);
+    car.speed = Math.max(car.speed, -this.MAX_REVERSE_SPEED);
+  
+    // =========================
+    // 2️⃣ 조향각 계산 (F1 스티어링 시스템)
+    // =========================
+    
+    // 입력에 따른 목표 조향각 설정
+    let targetSteer = 0;
+    if (input.left && !input.right) targetSteer = -this.MAX_STEER_ANGLE;
+    else if (input.right && !input.left) targetSteer = this.MAX_STEER_ANGLE;
+  
+    // 속도에 따른 조향각 감쇠 (고속일수록 조향각 제한)
+    // - 실제 F1: 고속에서는 작은 핸들 조작으로도 큰 영향
+    // - visualSpeedRatio: 0(정지) ~ 1(최고속의 70%)
+    // - 저속: 최대 65%의 조향각 사용 (민첩한 코너링)
+    // - 고속: 최대 95%의 조향각 사용 (안정성 유지하며 코너링)
+    const visualSpeedRatio = Math.min(1, Math.abs(car.speed) / (this.MAX_SPEED * 0.7));
+    targetSteer *= 0.65 + 0.30 * visualSpeedRatio;
 
-    // 최고/최저 속도 제한 (트랙 밖에서는 낮은 최대 속도 적용)
-    if (car.speed > maxForwardSpeed) {
-      car.speed = maxForwardSpeed;
+    // 조향각 부드럽게 적용 (핸들의 관성/무게감)
+    // - steerInertia: 속도가 빠를수록 핸들이 무겁게 느껴지는 효과
+    // - 실제 F1: 고속에서 핸들을 급하게 돌리기 어려움 (안전성)
+    const steerInertia = 1 / (1 + Math.abs(car.speed) * 0.025);
+    
+    // 실제 조향각 업데이트 (부드러운 보간)
+    // - 입력이 있을 때: STEERING_RESPONSE_SPEED 사용 (무거운 핸들)
+    // - 입력이 없을 때: STEERING_CENTERING_SPEED 사용 (빠른 센터링)
+    const isInputActive = input.left || input.right;
+    const steeringSpeed = isInputActive 
+      ? this.STEERING_RESPONSE_SPEED 
+      : this.STEERING_CENTERING_SPEED;
+    
+    car.steerAngle +=
+      (targetSteer - car.steerAngle) *
+      Math.min(1, steeringSpeed * steerInertia * deltaTime);
+
+    // =========================
+    // 3️⃣ 실제 차량 물리: 자전거 모델 (Bicycle Model)
+    // =========================
+    // km/h → m/s → pixels/s 변환
+    const speedMps = car.speed / 3.6;
+    const pixelsPerSecond = speedMps * this.PIXELS_PER_METER;
+  
+    // 앞바퀴가 실제로 향하는 방향
+    // - 차체 각도(car.angle)에 조향각(car.steerAngle)을 더한 방향
+    // - 예: 차가 북쪽(0°)을 향하고 핸들을 왼쪽(-30°)으로 돌리면 
+    //       앞바퀴는 북서쪽(-30°)을 향함
+    const frontWheelAngle = car.angle + car.steerAngle;
+    
+    // 앞바퀴가 향하는 방향의 속도 벡터
+    const frontVelX = pixelsPerSecond * Math.cos(frontWheelAngle);
+    const frontVelY = pixelsPerSecond * Math.sin(frontWheelAngle);
+    
+    // 뒷바퀴는 차체 방향으로만 이동 (타이어 그립 때문에 횡방향 슬립 거의 없음)
+    const rearVelX = pixelsPerSecond * Math.cos(car.angle);
+    const rearVelY = pixelsPerSecond * Math.sin(car.angle);
+    
+    // 차량 중심의 목표 속도 (앞뒤 바퀴의 기하학적 평균)
+    // - 실제 차량: 앞바퀴가 가고 싶은 곳 + 뒷바퀴가 갈 수 있는 곳의 절충
+    const targetVelX = (frontVelX + rearVelX) / 2;
+    const targetVelY = (frontVelY + rearVelY) / 2;
+    
+    // =========================
+    // 4️⃣ F1 타이어 그립 & 에어로 다운포스
+    // =========================
+    const speedAbs = Math.abs(pixelsPerSecond);
+    
+    // 다운포스 계산 (속도의 제곱에 비례)
+    // - 실제 F1: 고속 코너(200km/h+)에서 차체가 지면에 강하게 눌림
+    // - 저속(50km/h): 거의 다운포스 없음 → 기본 그립만 사용
+    // - 고속(150km/h): 강력한 다운포스 → 횡방향 그립 대폭 증가
+    const downforce = speedAbs * speedAbs * this.DOWNFORCE_COEFF;
+    
+    // 총 그립 = 기본 타이어 그립 + 속도 의존 다운포스
+    const totalGrip = this.BASE_LATERAL_GRIP + downforce;
+    
+    // 그립을 이용해 목표 속도로 수렴 (미끄러짐 제어)
+    // - gripFactor가 클수록 차가 빠르게 목표 방향으로 정렬
+    // - gripFactor가 작으면 미끄러지는 느낌 (드리프트)
+    // - 현재: 높은 BASE_LATERAL_GRIP(12.0)으로 미끄러짐 최소화
+    const gripFactor = Math.min(1, totalGrip * deltaTime);
+    
+    car.velocity.x += (targetVelX - car.velocity.x) * gripFactor;
+    car.velocity.y += (targetVelY - car.velocity.y) * gripFactor;
+  
+    // =========================
+    // 5️⃣ 차체 회전 (자전거 모델 운동학)
+    // =========================
+    // 📐 자전거 모델 공식: ω = (v / L) × sin(δ)
+    //   - ω (omega): 차체 각속도 (rad/s)
+    //   - v: 차량 속도 (pixels/s)
+    //   - L: 휠베이스 (픽셀)
+    //   - δ (delta): 앞바퀴 조향각 (rad)
+    //
+    // 원리:
+    //   - 앞바퀴가 angle+δ 방향을 향하고, 뒷바퀴가 angle 방향을 향함
+    //   - 두 방향의 차이로 인해 차체가 회전
+    //   - 휠베이스가 길수록 회전 반경이 커짐 (덜 민첩)
+    //   - 속도가 빠를수록 같은 조향각에서 더 빠르게 회전
+    
+    let angularVelocity = 0;
+    if (Math.abs(car.steerAngle) > 0.0001 && Math.abs(pixelsPerSecond) > 0.1) {
+      const wheelBasePixels = this.WHEEL_BASE_METERS * this.PIXELS_PER_METER;
+      angularVelocity = (pixelsPerSecond / wheelBasePixels) * Math.sin(car.steerAngle);
     }
-    if (car.speed < -this.MAX_REVERSE_SPEED) {
-      car.speed = -this.MAX_REVERSE_SPEED;
-    }
-
-    // 회전 (속도에 비례하되, 정지 상태에서도 어느 정도 회전 가능)
-    const baseTurnFactor = 0.7;
-    const effectiveSpeed = Math.max(30, Math.abs(car.speed)); // 저속에서도 회전성을 확보
-    const speedRatio = Math.min(1, effectiveSpeed / this.MAX_SPEED);
-    const turnAmount = this.TURN_SPEED * (baseTurnFactor + speedRatio) * deltaTime;
-    if (input.left) {
-      car.angle -= turnAmount;
-    }
-    if (input.right) {
-      car.angle += turnAmount;
-    }
-
-    // km/h -> px/s 변환
-    const speedMetersPerSecond = car.speed / 3.6;
-    const pixelsPerSecond = speedMetersPerSecond * this.PIXELS_PER_METER;
-
-    const targetVelX = Math.cos(car.angle) * pixelsPerSecond;
-    const targetVelY = Math.sin(car.angle) * pixelsPerSecond;
-
-    // 드리프트 효과 (점진적으로 목표 속도로 수렴)
-    car.velocity.x = car.velocity.x * this.DRIFT_FACTOR + targetVelX * (1 - this.DRIFT_FACTOR);
-    car.velocity.y = car.velocity.y * this.DRIFT_FACTOR + targetVelY * (1 - this.DRIFT_FACTOR);
-
+    
+    // 차체 각도 적용 (차가 실제로 회전)
+    car.angle += angularVelocity * deltaTime;
+    car.angularVelocity = angularVelocity; // 디버깅/UI용 상태 저장
+  
+    // =========================
+    // 6️⃣ 위치 업데이트
+    // =========================
     car.position.x += car.velocity.x * deltaTime;
     car.position.y += car.velocity.y * deltaTime;
-
-    // 매우 낮은 속도는 0으로 처리
-    if (Math.abs(car.speed) < 0.1) {
-      car.speed = 0;
-    }
-
-    // 체크포인트 진행도 업데이트 (시계 방향 순서로만 진행)
+  
+    if (Math.abs(car.speed) < 0.1) car.speed = 0;
+  
+    // =========================
+    // 8️⃣ 체크포인트 & 랩
+    // =========================
     this.updateCheckpointProgress(car);
-
-    // 스타트 라인 통과 체크 (정방향 & 한 바퀴 체크포인트 모두 통과한 경우에만 랩 증가)
+  
     const crossDir = this.checkStartLineCross(prevPosition, car.position);
     if (crossDir === 'forward' && car.checkpoint === this.CHECKPOINTS.length - 1) {
       car.lap += 1;
-      // 다음 랩을 위해 체크포인트 진행도 초기화
       car.checkpoint = -1;
-
-      // 목표 랩 수를 모두 완료했으면 완주 처리
+  
       if (!car.retired && room.startTime != null && car.lap >= room.totalLaps) {
         car.finished = true;
-        const elapsed = Date.now() - room.startTime;
-        car.finishTime = elapsed;
+        car.finishTime = Date.now() - room.startTime;
       }
     }
   }
+  
 
   // 체크포인트를 올바른 순서로 통과했는지 진행도 업데이트
   private updateCheckpointProgress(car: CarState): void {
