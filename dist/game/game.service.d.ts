@@ -43,9 +43,11 @@ export declare class GameService {
     private readonly MAX_SPEED;
     private readonly MAX_SPEED_OFF_TRACK;
     private readonly MAX_REVERSE_SPEED;
-    private readonly ZERO_TO_HUNDRED_TIME;
-    private readonly ACCELERATION;
+    private readonly ACCEL_LOW;
+    private readonly ACCEL_MID;
+    private readonly ACCEL_HIGH;
     private readonly ACCELERATION_OFF_TRACK;
+    private readonly OFF_TRACK_DECELERATION;
     private readonly BRAKE_POWER;
     private readonly FRICTION;
     private readonly PIXELS_PER_METER;
@@ -92,6 +94,7 @@ export declare class GameService {
     private updateCheckpointProgress;
     private checkRaceFinished;
     private checkStartLineCross;
+    private getAcceleration;
     private isOnTrack;
     getRoom(roomId: string): GameRoom | null;
     getRoomByPlayer(playerId: string): GameRoom | null;

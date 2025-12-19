@@ -42,11 +42,52 @@ class Game {
       // 초기 방 목록 요청
       this.network.getRooms();
       
+      // 임시: 차량 미리보기 초기화 (추후 제거 예정)
+      this.initCarPreview();
+      
       console.log('Game initialized');
     } catch (error) {
       console.error('Failed to initialize game:', error);
       alert('서버 연결에 실패했습니다.');
     }
+  }
+  
+  // 임시: 차량 미리보기 초기화 (추후 제거 예정)
+  initCarPreview() {
+    const previewCanvas = document.getElementById('carPreviewCanvas');
+    if (!previewCanvas) return;
+    
+    const previewRenderer = new Renderer(previewCanvas);
+    
+    // 테스트용 차량 데이터
+    const testCar = {
+      id: 'preview',
+      nickname: 'Preview',
+      position: { x: 200, y: 150 },
+      angle: 0,
+      steerAngle: 0,
+      carSkin: null
+    };
+    
+    // 미리보기 렌더링 함수
+    const renderPreview = () => {
+      // 로비 화면이 활성화되어 있을 때만 렌더링
+      if (this.screens.lobby.classList.contains('active')) {
+        // 배경 클리어
+        previewRenderer.clear();
+        
+        // 차량 그리기
+        previewRenderer.drawCar(testCar, true);
+        
+        // 조향각 애니메이션 (시각 효과)
+        testCar.steerAngle = Math.sin(Date.now() / 1000) * 0.3;
+        
+        requestAnimationFrame(renderPreview);
+      }
+    };
+    
+    // 초기 렌더링 시작
+    renderPreview();
   }
   
   setupEventListeners() {

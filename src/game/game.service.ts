@@ -56,13 +56,32 @@ export class GameService {
   private playerRooms: Map<string, string> = new Map();
 
   // 차량 물리 상수 (km/h, 초 기준)
-  // 0 -> 100km/h 를 약 2.5초에 도달시키기 위한 가속도
+  // ========================================
+  // 🏎️ F1 가속도 시스템 (속도 구간별 가속도)
+  // ========================================
+  // 실제 F1 차량의 가속도 특성:
+  // - 0 → 100km/h: 2.5초 (기본 가속도)
+  // - 100 → 200km/h: 2초 (더 빠른 가속도 - 고단 기어 효율)
+  // - 200 → 300km/h: 4초 (느린 가속도 - 공기 저항 증가)
+  
   private readonly MAX_SPEED = 300; // km/h
-  private readonly MAX_SPEED_OFF_TRACK = 80; // 트랙 밖 최대 속도 (느리게)
+  private readonly MAX_SPEED_OFF_TRACK = 120; // 트랙 밖 최대 속도 (느리게)
   private readonly MAX_REVERSE_SPEED = 30; // km/h
-  private readonly ZERO_TO_HUNDRED_TIME = 2.5; // 초
-  private readonly ACCELERATION = 100 / this.ZERO_TO_HUNDRED_TIME; // km/h per second (≈ 40)
-  private readonly ACCELERATION_OFF_TRACK = this.ACCELERATION * 0.35; // 트랙 밖 가속도 (느리게)
+  
+  // 속도 구간별 가속도 (km/h per second)
+  // - 0-100km/h: 40 km/h/s (100km/h / 2.5초)
+  private readonly ACCEL_LOW = 45;
+  // - 100-200km/h: 50 km/h/s (100km/h / 2초) - 더 빠름
+  private readonly ACCEL_MID = 50;
+  // - 200-300km/h: 25 km/h/s (100km/h / 4초) - 느림
+  private readonly ACCEL_HIGH = 25;
+  
+  // 트랙 밖 가속도 (기본 가속도의 35%)
+  private readonly ACCELERATION_OFF_TRACK = this.ACCEL_LOW * 0.65;
+  // 트랙 밖 감속 속도 (트랙 밖으로 나갔을 때 80km/h까지 감속하는 속도)
+  // - 값이 클수록 빠르게 감속, 작을수록 천천히 감속
+  // - 현재: 60 km/h per second (200km/h에서 80km/h까지 약 2초)
+  private readonly OFF_TRACK_DECELERATION = 80;
   private readonly BRAKE_POWER = 80; // 브레이크 감속 km/h per second
   private readonly FRICTION = 40; // 자연 감속 km/h per second (가속 버튼에서 손 떼면 더 빨리 감속)
   private readonly PIXELS_PER_METER = 6; // 1m를 몇 px로 볼지
@@ -80,7 +99,7 @@ export class GameService {
   // - 실제 F1: 약 20~30도
   // - 값이 클수록 급격한 회전 가능, 작을수록 안정적
   // - 현재: 30도 (Math.PI / 6 ≈ 0.524 rad)
-  private readonly MAX_STEER_ANGLE = Math.PI / 6;
+  private readonly MAX_STEER_ANGLE = Math.PI / 6.5;
   
   // 휠베이스(앞/뒤 바퀴 간 거리)
   // - 실제 F1: 약 3.0~3.6m
@@ -112,9 +131,10 @@ export class GameService {
   
   // 기본 횡방향 그립 (타이어 컴파운드)
   // - 값이 클수록 미끄러짐 감소, 차가 목표 방향으로 빠르게 수렴
+  // - 값이 작을수록 관성이 더 유지되어 급격한 방향 전환에 유리
   // - 실제 F1: 소프트 타이어(높은 그립) vs 하드 타이어(낮은 그립)
-  // - 현재: 12.0 (높은 그립 - 미끄러짐 최소화)
-  private readonly BASE_LATERAL_GRIP = 12.0;
+  // - 현재: 9.0 (적당한 그립 - 급격한 방향 전환 반응성 향상)
+  private readonly BASE_LATERAL_GRIP = 11.0;
   
   // 다운포스 계수 (속도²에 비례)
   // - 속도가 빠를수록 차체가 지면에 눌려 그립 증가
@@ -137,7 +157,7 @@ export class GameService {
   // - 실제 F1: 파워 스티어링의 센터링 포스로 핸들이 자동으로 중앙 복귀
   // - 값이 클수록 빠르게 중앙으로 돌아감
   // - 현재: 20.0 (매우 빠른 센터링 - 손 떼면 즉시 직진)
-  private readonly STEERING_CENTERING_SPEED = 30.0;
+  private readonly STEERING_CENTERING_SPEED = 40.0;
 
 
 
@@ -439,13 +459,16 @@ export class GameService {
     const prevPosition: Vector2D = { ...car.position };
   
     const onTrack = this.isOnTrack(car.position);
-    const accel = onTrack ? this.ACCELERATION : this.ACCELERATION_OFF_TRACK;
     const maxForwardSpeed = onTrack ? this.MAX_SPEED : this.MAX_SPEED_OFF_TRACK;
   
     // =========================
-    // 1️⃣ 속도 입력 처리
+    // 1️⃣ 속도 입력 처리 (F1 구간별 가속도)
     // =========================
     if (input.up) {
+      // 현재 속도에 따라 가속도 선택
+      const accel = onTrack 
+        ? this.getAcceleration(car.speed)
+        : this.ACCELERATION_OFF_TRACK;
       car.speed += accel * deltaTime;
     }
   
@@ -453,7 +476,11 @@ export class GameService {
       if (car.speed > 5) {
         car.speed -= this.BRAKE_POWER * deltaTime;
       } else {
-        car.speed -= accel * deltaTime;
+        // 후진 시 기본 가속도 사용
+        const reverseAccel = onTrack 
+          ? this.ACCEL_LOW 
+          : this.ACCELERATION_OFF_TRACK;
+        car.speed -= reverseAccel * deltaTime;
       }
     }
   
@@ -465,6 +492,18 @@ export class GameService {
       }
     }
   
+    // =========================
+    // 트랙 밖 감속 처리
+    // =========================
+    // 트랙 밖에 있고 현재 속도가 최대 속도(80km/h)보다 크면 천천히 감속
+    if (!onTrack && car.speed > this.MAX_SPEED_OFF_TRACK) {
+      car.speed = Math.max(
+        this.MAX_SPEED_OFF_TRACK,
+        car.speed - this.OFF_TRACK_DECELERATION * deltaTime
+      );
+    }
+  
+    // 최대 속도 제한 (트랙 위에서는 300km/h, 트랙 밖에서는 80km/h)
     car.speed = Math.min(car.speed, maxForwardSpeed);
     car.speed = Math.max(car.speed, -this.MAX_REVERSE_SPEED);
   
@@ -720,6 +759,25 @@ export class GameService {
     }
 
     return null;
+  }
+
+  // 현재 속도에 따른 가속도 반환 (F1 구간별 가속도)
+  // - 0-100km/h: ACCEL_LOW (40 km/h/s)
+  // - 100-200km/h: ACCEL_MID (50 km/h/s) - 더 빠름
+  // - 200-300km/h: ACCEL_HIGH (25 km/h/s) - 느림
+  private getAcceleration(currentSpeed: number): number {
+    const speed = Math.abs(currentSpeed);
+    
+    if (speed < 100) {
+      // 0-100km/h: 기본 가속도
+      return this.ACCEL_LOW;
+    } else if (speed < 200) {
+      // 100-200km/h: 더 빠른 가속도 (고단 기어 효율)
+      return this.ACCEL_MID;
+    } else {
+      // 200-300km/h: 느린 가속도 (공기 저항 증가)
+      return this.ACCEL_HIGH;
+    }
   }
 
   // 중앙선으로부터의 최소 거리를 이용해 트랙 안/밖 판정

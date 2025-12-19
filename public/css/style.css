@@ -24,7 +24,7 @@ body {
   background: var(--bg-dark);
   color: var(--text-primary);
   min-height: 100vh;
-  overflow: hidden;
+  overflow: auto;
   background-image: 
     radial-gradient(ellipse at top, rgba(0, 212, 255, 0.1) 0%, transparent 50%),
     radial-gradient(ellipse at bottom right, rgba(255, 107, 53, 0.1) 0%, transparent 50%),
@@ -33,14 +33,16 @@ body {
 
 .screen {
   display: none;
-  width: 100vw;
-  height: 100vh;
+  width: 100%;
+  min-height: 100vh;
 }
 
 .screen.active {
   display: flex;
   justify-content: center;
-  align-items: center;
+  align-items: flex-start;
+  padding: 20px;
+  overflow-y: auto;
 }
 
 /* 로비 화면 */

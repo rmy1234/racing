@@ -12,17 +12,19 @@ let GameService = class GameService {
     rooms = new Map();
     playerRooms = new Map();
     MAX_SPEED = 300;
-    MAX_SPEED_OFF_TRACK = 80;
+    MAX_SPEED_OFF_TRACK = 120;
     MAX_REVERSE_SPEED = 30;
-    ZERO_TO_HUNDRED_TIME = 2.5;
-    ACCELERATION = 100 / this.ZERO_TO_HUNDRED_TIME;
-    ACCELERATION_OFF_TRACK = this.ACCELERATION * 0.35;
+    ACCEL_LOW = 45;
+    ACCEL_MID = 50;
+    ACCEL_HIGH = 25;
+    ACCELERATION_OFF_TRACK = this.ACCEL_LOW * 0.65;
+    OFF_TRACK_DECELERATION = 80;
     BRAKE_POWER = 80;
     FRICTION = 40;
     PIXELS_PER_METER = 6;
     TRACK_WIDTH_PX = 90;
     TRACK_CENTER_PATH = this.buildTrackCenterPath();
-    MAX_STEER_ANGLE = Math.PI / 6;
+    MAX_STEER_ANGLE = Math.PI / 6.5;
     WHEEL_BASE_METERS = 3.0;
     CHECKPOINTS = [
         { x: 930, y: 420 },
@@ -34,10 +36,10 @@ let GameService = class GameService {
     START_LINE_Y = 620;
     START_LINE_ANGLE = 0;
     START_LINE_HALF_LENGTH = 45;
-    BASE_LATERAL_GRIP = 12.0;
+    BASE_LATERAL_GRIP = 11.0;
     DOWNFORCE_COEFF = 0.004;
     STEERING_RESPONSE_SPEED = 3.5;
-    STEERING_CENTERING_SPEED = 30.0;
+    STEERING_CENTERING_SPEED = 40.0;
     createRoom(hostId, hostNickname, roomName, carSkin) {
         const roomId = this.generateRoomId();
         const room = {
@@ -267,9 +269,11 @@ let GameService = class GameService {
     updateCarPhysics(room, car, input, deltaTime) {
         const prevPosition = { ...car.position };
         const onTrack = this.isOnTrack(car.position);
-        const accel = onTrack ? this.ACCELERATION : this.ACCELERATION_OFF_TRACK;
         const maxForwardSpeed = onTrack ? this.MAX_SPEED : this.MAX_SPEED_OFF_TRACK;
         if (input.up) {
+            const accel = onTrack
+                ? this.getAcceleration(car.speed)
+                : this.ACCELERATION_OFF_TRACK;
             car.speed += accel * deltaTime;
         }
         if (input.down) {
@@ -277,7 +281,10 @@ let GameService = class GameService {
                 car.speed -= this.BRAKE_POWER * deltaTime;
             }
             else {
-                car.speed -= accel * deltaTime;
+                const reverseAccel = onTrack
+                    ? this.ACCEL_LOW
+                    : this.ACCELERATION_OFF_TRACK;
+                car.speed -= reverseAccel * deltaTime;
             }
         }
         if (!input.up && !input.down) {
@@ -287,6 +294,9 @@ let GameService = class GameService {
             else if (car.speed < 0) {
                 car.speed = Math.min(0, car.speed + this.FRICTION * deltaTime);
             }
+        }
+        if (!onTrack && car.speed > this.MAX_SPEED_OFF_TRACK) {
+            car.speed = Math.max(this.MAX_SPEED_OFF_TRACK, car.speed - this.OFF_TRACK_DECELERATION * deltaTime);
         }
         car.speed = Math.min(car.speed, maxForwardSpeed);
         car.speed = Math.max(car.speed, -this.MAX_REVERSE_SPEED);
@@ -423,6 +433,18 @@ let GameService = class GameService {
             return 'backward';
         }
         return null;
+    }
+    getAcceleration(currentSpeed) {
+        const speed = Math.abs(currentSpeed);
+        if (speed < 100) {
+            return this.ACCEL_LOW;
+        }
+        else if (speed < 200) {
+            return this.ACCEL_MID;
+        }
+        else {
+            return this.ACCEL_HIGH;
+        }
     }
     isOnTrack(position) {
         let minDistSq = Infinity;
