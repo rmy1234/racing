@@ -9,6 +9,7 @@ class Game {
     this.currentRoom = null;
     this.localPlayerId = null;
     this.nickname = '';
+    this.carColor = { r: 45, g: 108, b: 232 }; // 기본 색상 (파란색) - #2d6ce8
 
     this.gameState = null;
     this.input = {
@@ -45,6 +46,9 @@ class Game {
       // 임시: 차량 미리보기 초기화 (추후 제거 예정)
       this.initCarPreview();
       
+      // 색상 선택 UI 초기화
+      this.setupColorPicker();
+      
       console.log('Game initialized');
     } catch (error) {
       console.error('Failed to initialize game:', error);
@@ -52,27 +56,73 @@ class Game {
     }
   }
   
-  // 임시: 차량 미리보기 초기화 (추후 제거 예정)
+  // 색상 선택 UI 설정
+  setupColorPicker() {
+    const colorPicker = document.getElementById('carColorPicker');
+    const colorPreview = document.getElementById('colorPreview');
+    const colorValueText = document.getElementById('colorValueText');
+
+    if (!colorPicker || !colorPreview || !colorValueText) {
+      return;
+    }
+
+    // HEX를 RGB로 변환하는 함수
+    const hexToRgb = (hex) => {
+      const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+      return result ? {
+        r: parseInt(result[1], 16),
+        g: parseInt(result[2], 16),
+        b: parseInt(result[3], 16)
+      } : null;
+    };
+
+    const updateColor = () => {
+      const hexColor = colorPicker.value;
+      const rgb = hexToRgb(hexColor);
+      
+      if (rgb) {
+        // 색상 미리보기 업데이트
+        colorPreview.style.background = hexColor;
+        colorValueText.textContent = hexColor.toUpperCase();
+        
+        // 게임 객체에 색상 저장
+        this.carColor = rgb;
+      }
+    };
+
+    // 색상 선택 이벤트
+    colorPicker.addEventListener('input', updateColor);
+    colorPicker.addEventListener('change', updateColor);
+
+    // 초기 색상 설정
+    updateColor();
+  }
+
+  // 차량 미리보기 초기화
   initCarPreview() {
     const previewCanvas = document.getElementById('carPreviewCanvas');
     if (!previewCanvas) return;
     
     const previewRenderer = new Renderer(previewCanvas);
     
-    // 테스트용 차량 데이터
+    // 미리보기용 차량 데이터
     const testCar = {
       id: 'preview',
       nickname: 'Preview',
-      position: { x: 200, y: 150 },
+      position: { x: previewCanvas.width / 2, y: previewCanvas.height / 2 },
       angle: 0,
       steerAngle: 0,
-      carSkin: null
+      carSkin: null,
+      carColor: this.carColor
     };
     
     // 미리보기 렌더링 함수
     const renderPreview = () => {
       // 로비 화면이 활성화되어 있을 때만 렌더링
       if (this.screens.lobby.classList.contains('active')) {
+        // 현재 색상 업데이트 (색상 선택 시 자동 반영)
+        testCar.carColor = this.carColor;
+        
         // 배경 클리어
         previewRenderer.clear();
         
@@ -104,7 +154,9 @@ class Game {
         return;
       }
       const roomName = `${this.nickname}의 레이스`;
-      this.network.createRoom(this.nickname, roomName);
+      // RGB 색상을 JSON 문자열로 변환하여 전달
+      const carColorStr = JSON.stringify(this.carColor);
+      this.network.createRoom(this.nickname, roomName, carColorStr);
     });
     
     // 새로고침 버튼
@@ -197,6 +249,22 @@ class Game {
     
     // 게임 상태 업데이트
     this.network.on('gameState', (state) => {
+      // carSkin 문자열을 carColor 객체로 변환
+      if (state.players && Array.isArray(state.players)) {
+        state.players = state.players.map(player => {
+          if (player.carSkin && typeof player.carSkin === 'string') {
+            try {
+              const colorObj = JSON.parse(player.carSkin);
+              if (colorObj.r !== undefined && colorObj.g !== undefined && colorObj.b !== undefined) {
+                player.carColor = colorObj;
+              }
+            } catch (e) {
+              // JSON 파싱 실패 시 무시
+            }
+          }
+          return player;
+        });
+      }
       this.gameState = state;
     });
     
@@ -275,7 +343,9 @@ class Game {
       alert('닉네임을 입력해주세요.');
       return;
     }
-    this.network.joinRoom(roomId, this.nickname);
+    // RGB 색상을 JSON 문자열로 변환하여 전달
+    const carColorStr = JSON.stringify(this.carColor);
+    this.network.joinRoom(roomId, this.nickname, carColorStr);
   }
   
   showWaitingRoom(room) {

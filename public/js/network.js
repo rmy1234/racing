@@ -125,12 +125,12 @@ class Network {
     this.send('getRooms');
   }
   
-  createRoom(nickname, roomName) {
-    this.send('createRoom', { nickname, roomName });
+  createRoom(nickname, roomName, carColor) {
+    this.send('createRoom', { nickname, roomName, carSkin: carColor });
   }
   
-  joinRoom(roomId, nickname) {
-    this.send('joinRoom', { roomId, nickname });
+  joinRoom(roomId, nickname, carColor) {
+    this.send('joinRoom', { roomId, nickname, carSkin: carColor });
   }
   
   leaveRoom() {

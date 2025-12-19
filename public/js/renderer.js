@@ -606,13 +606,29 @@ class Renderer {
     // 닉네임 표시
     // ========================================
     // 차량 위에 플레이어 닉네임 표시
-    // - 로컬 플레이어: 초록색 (#00ff88)
-    // - 다른 플레이어: 흰색 (#ffffff)
+    // - 차량 색상과 동일한 색상 사용
     // - 위치: 차량 위쪽 (y - length * 0.65 = y - 52)
-    ctx.fillStyle = isLocalPlayer ? '#00ff88' : '#ffffff';
+    
+    // 차량 메인 색상 사용 (이미 위에서 가져온 palette 사용)
+    const nicknameColor = palette.bodyTop;
+    
+    ctx.fillStyle = nicknameColor;
     ctx.font = 'bold 13px Arial';
     ctx.textAlign = 'center';
+    
+    // 텍스트 그림자 효과 (가독성 향상)
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.8)';
+    ctx.shadowBlur = 4;
+    ctx.shadowOffsetX = 1;
+    ctx.shadowOffsetY = 1;
+    
     ctx.fillText(car.nickname, x, y - length * 0.65);
+    
+    // 그림자 초기화
+    ctx.shadowColor = 'transparent';
+    ctx.shadowBlur = 0;
+    ctx.shadowOffsetX = 0;
+    ctx.shadowOffsetY = 0;
   }
   
   // ========================================
@@ -661,8 +677,69 @@ class Renderer {
     ctx.restore();
   }
 
-  // car.carSkin 값(문자열)을 기반으로 팔레트를 선택
+  // RGB 값을 HEX로 변환하는 헬퍼 함수
+  rgbToHex(r, g, b) {
+    return '#' + [r, g, b].map(x => {
+      const hex = Math.max(0, Math.min(255, Math.round(x))).toString(16);
+      return hex.length === 1 ? '0' + hex : hex;
+    }).join('');
+  }
+
+  // 밝은/어두운 색상 생성 헬퍼 함수
+  lightenColor(r, g, b, factor) {
+    return [
+      Math.min(255, r + (255 - r) * factor),
+      Math.min(255, g + (255 - g) * factor),
+      Math.min(255, b + (255 - b) * factor)
+    ];
+  }
+
+  darkenColor(r, g, b, factor) {
+    return [
+      Math.max(0, r * (1 - factor)),
+      Math.max(0, g * (1 - factor)),
+      Math.max(0, b * (1 - factor))
+    ];
+  }
+
+  // RGB 값으로 팔레트 생성
+  createPaletteFromRGB(r, g, b) {
+    const [rLight, gLight, bLight] = this.lightenColor(r, g, b, 0.15);
+    const [rDark, gDark, bDark] = this.darkenColor(r, g, b, 0.6);
+    const [rEdge, gEdge, bEdge] = this.darkenColor(r, g, b, 0.85);
+    const [rSidepod, gSidepod, bSidepod] = this.darkenColor(r, g, b, 0.5);
+
+    return {
+      floor: '#05070c',
+      bodyTop: this.rgbToHex(r, g, b),
+      bodyTopMid: this.rgbToHex(rLight, gLight, bLight),
+      bodyBottom: this.rgbToHex(rDark, gDark, bDark),
+      bodyEdge: this.rgbToHex(rEdge, gEdge, bEdge),
+      stripe: '#ffffff',
+      sidepod: this.rgbToHex(rSidepod, gSidepod, bSidepod),
+      frontWingMain: '#f5f7ff',
+      frontWingFlap: '#dde4ff',
+      frontWingEndplateInner: '#ffffff',
+      frontWingEndplateOuter: this.rgbToHex(r, g, b),
+      rearWingMain: '#f5f7ff',
+      rearWingFlap: '#dde4ff',
+      rearWingEndplateInner: '#ffffff',
+      rearWingEndplateOuter: this.rgbToHex(r, g, b),
+      halo: this.rgbToHex(rEdge, gEdge, bEdge),
+      helmet: '#f5f5f5',
+    };
+  }
+
+  // car.carSkin 값(문자열) 또는 car.carColor (RGB 객체)를 기반으로 팔레트를 선택
   getCarPalette(car, isLocalPlayer) {
+    // RGB 색상이 직접 지정된 경우
+    if (car.carColor && typeof car.carColor === 'object') {
+      const { r, g, b } = car.carColor;
+      if (typeof r === 'number' && typeof g === 'number' && typeof b === 'number') {
+        return this.createPaletteFromRGB(r, g, b);
+      }
+    }
+
     const presets = [
       // 파란 바디 + 노란 스트라이프 (로컬 기본)
       {
