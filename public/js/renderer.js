@@ -242,9 +242,9 @@ class Renderer {
     
     // 오른쪽 노즈: 좁게 유지
     ctx.bezierCurveTo(
-      noseWidth * 0.3, noseTipY + 5,
-      noseWidth * 0.6, -length * 0.35,
-      noseWidth * 0.7, -length * 0.2       // 노즈가 좁게 유지됨
+      noseWidth * 0.6, noseTipY + 2,
+      noseWidth * 0.5, -length * 0.7,
+      noseWidth * 0.6, -length * 0.3       // 노즈가 좁게 유지됨
     );
     
     // 오른쪽: 사이드팟에서 갑자기 넓어짐
@@ -280,8 +280,8 @@ class Renderer {
     
     // 왼쪽 노즈
     ctx.bezierCurveTo(
-      -noseWidth * 0.6, -length * 0.35,
-      -noseWidth * 0.3, noseTipY + 5,
+      -noseWidth * 0.6, -length * 0.6,
+      -noseWidth * 0.9, noseTipY + 2,
       0, noseTipY                          // 노즈 팁
     );
     
@@ -339,66 +339,117 @@ class Renderer {
     ctx.fill();
 
     // ========================================
-    // 5) 프론트 윙 (화살표 형태, 앞으로 뾰족하고 안쪽으로 들어감)
+// 5) 프론트 윙 (실제 F1 스타일 - Swept back 및 멀티 엘리먼트)
     // ========================================
-    // 이미지처럼 양 끝이 화살표 형태로 앞으로 뾰족하고 안쪽으로 들어감
-    const frontWingY = noseTipY - 3;
-    const frontWingSpan = wheelOffsetX * 2.0;   // 앞바퀴 사이 너비
-    const arrowTipY = frontWingY - 4;           // 화살표 뾰족한 끝 (앞으로)
-    const arrowInnerY = frontWingY + 3;         // 화살표 안쪽 들어간 부분
+    // 실제 F1 차량처럼 중앙이 앞서고 양 끝이 뒤로 처지는 형태, 여러 겹의 플랩 표현
 
-    // 프론트 윙 메인 구조
-    ctx.fillStyle = palette.bodyTop;
+    const wingHalfSpan = wheelOffsetX + 1.5; // 윙의 절반 너비 (바퀴 안쪽까지)
+    const wingLeadingEdgeY = noseTipY - 13; // 윙의 가장 앞부분 위치 (노즈 팁 약간 뒤)
+    const wingChord = 10;                  // 윙의 앞뒤 폭 (깊이)
+    const wingSweep = 8;                   // 양 끝이 중앙보다 얼마나 뒤로 가는지 (스윕 각도)
+    const flapOffset = 3;                  // 플랩 사이의 간격
+
+    // --- 메인 플레인 (가장 아래, 가장 큰 날개) ---
+    ctx.fillStyle = palette.bodyTop; // 기본 색상
     ctx.beginPath();
-    
-    // 왼쪽 화살표 끝 (뾰족하게 앞으로)
-    ctx.moveTo(-frontWingSpan / 2 - 3, arrowTipY);
-    // 왼쪽 화살표 안쪽 (뒤로 들어감)
-    ctx.lineTo(-frontWingSpan / 2, arrowInnerY);
-    // 왼쪽 안쪽에서 중앙 방향으로
-    ctx.lineTo(-frontWingSpan / 2 + 8, arrowInnerY + 2);
-    // 중앙 연결부
-    ctx.lineTo(-noseWidth * 0.6, frontWingY + 4);
-    ctx.lineTo(0, frontWingY + 3);
-    ctx.lineTo(noseWidth * 0.6, frontWingY + 4);
-    // 오른쪽 안쪽에서 끝 방향으로
-    ctx.lineTo(frontWingSpan / 2 - 8, arrowInnerY + 2);
-    ctx.lineTo(frontWingSpan / 2, arrowInnerY);
-    // 오른쪽 화살표 끝 (뾰족하게 앞으로)
-    ctx.lineTo(frontWingSpan / 2 + 3, arrowTipY);
-    // 오른쪽 끝 앞부분
-    ctx.lineTo(frontWingSpan / 2, arrowTipY - 1);
-    // 오른쪽에서 중앙으로 (앞쪽 라인)
-    ctx.lineTo(frontWingSpan / 2 - 6, frontWingY);
-    ctx.lineTo(noseWidth * 0.8, frontWingY + 1);
-    ctx.lineTo(0, frontWingY);
-    ctx.lineTo(-noseWidth * 0.8, frontWingY + 1);
-    ctx.lineTo(-frontWingSpan / 2 + 6, frontWingY);
-    // 왼쪽 끝 앞부분
-    ctx.lineTo(-frontWingSpan / 2, arrowTipY - 1);
+    // 중앙 앞부분 (노즈 연결부)
+    ctx.moveTo(-noseWidth * 0.5, wingLeadingEdgeY + 2);
+    ctx.lineTo(noseWidth * 0.5, wingLeadingEdgeY + 2);
+
+    // 오른쪽 날개 앞선 (부드러운 곡선으로 뒤로 처짐)
+    ctx.bezierCurveTo(
+        noseWidth * 0.8, wingLeadingEdgeY,         // 제어점 1
+        wingHalfSpan * 0.6, wingLeadingEdgeY,      // 제어점 2
+        wingHalfSpan, wingLeadingEdgeY + wingSweep // 끝점 (오른쪽 윙팁 앞)
+    );
+    // 오른쪽 윙팁 옆선
+    ctx.lineTo(wingHalfSpan, wingLeadingEdgeY + wingSweep + wingChord);
+
+    // 오른쪽 날개 뒷선 (다시 중앙으로 곡선)
+    ctx.bezierCurveTo(
+        wingHalfSpan * 0.6, wingLeadingEdgeY + wingChord,
+        noseWidth * 0.8, wingLeadingEdgeY + wingChord + 2,
+        noseWidth * 0.5, wingLeadingEdgeY + wingChord + 4
+    );
+    // 중앙 뒷부분 연결
+    ctx.lineTo(-noseWidth * 0.5, wingLeadingEdgeY + wingChord + 4);
+
+    // 왼쪽 날개 뒷선 (대칭)
+    ctx.bezierCurveTo(
+        -wingHalfSpan * 0.6, wingLeadingEdgeY + wingChord,
+        -noseWidth * 0.8, wingLeadingEdgeY + wingChord + 2,
+        -wingHalfSpan, wingLeadingEdgeY + wingSweep + wingChord
+    );
+    // 왼쪽 윙팁 옆선
+    ctx.lineTo(-wingHalfSpan, wingLeadingEdgeY + wingSweep);
+
+    // 왼쪽 날개 앞선 (대칭)
+    ctx.bezierCurveTo(
+        -wingHalfSpan * 0.6, wingLeadingEdgeY,
+        -noseWidth * 0.8, wingLeadingEdgeY,
+        -noseWidth * 0.5, wingLeadingEdgeY + 2
+    );
     ctx.closePath();
     ctx.fill();
 
-    // 엔드플레이트 (화살표 형태 강조)
+    // --- 상단 플랩 (레이어 추가로 디테일 표현) ---
+    // 메인 플레인보다 약간 더 밝게 처리하거나 같은 색으로 선만 표현해도 좋지만,
+    // 여기서는 같은 색을 사용하되 위치를 살짝 뒤로, 크기를 줄여 겹쳐진 느낌을 냄
     ctx.fillStyle = palette.bodyTop;
+    ctx.beginPath();
+    // 중앙 시작점 (메인보다 약간 뒤)
+    ctx.moveTo(-noseWidth * 0.4, wingLeadingEdgeY + flapOffset);
+    ctx.lineTo(noseWidth * 0.4, wingLeadingEdgeY + flapOffset);
+
+    // 오른쪽 플랩 곡선
+    ctx.bezierCurveTo(
+        wingHalfSpan * 0.5, wingLeadingEdgeY + flapOffset - 1,
+        wingHalfSpan * 0.9, wingLeadingEdgeY + wingSweep + flapOffset - 2,
+        wingHalfSpan - 1, wingLeadingEdgeY + wingSweep + flapOffset
+    );
+    // 오른쪽 플랩 뒷선 및 중앙 복귀
+    ctx.lineTo(wingHalfSpan - 1, wingLeadingEdgeY + wingSweep + wingChord - 2);
+    ctx.bezierCurveTo(
+        wingHalfSpan * 0.5, wingLeadingEdgeY + wingChord,
+        noseWidth * 0.4, wingLeadingEdgeY + wingChord + 2,
+        noseWidth * 0.4, wingLeadingEdgeY + wingChord + 3
+    );
+    ctx.lineTo(-noseWidth * 0.4, wingLeadingEdgeY + wingChord + 3);
+
+    // 왼쪽 플랩 (대칭)
+    ctx.bezierCurveTo(
+        -wingHalfSpan * 0.5, wingLeadingEdgeY + wingChord,
+        -noseWidth * 0.4, wingLeadingEdgeY + wingChord + 2,
+        -wingHalfSpan + 1, wingLeadingEdgeY + wingSweep + wingChord - 2
+    );
+    ctx.lineTo(-wingHalfSpan + 1, wingLeadingEdgeY + wingSweep + flapOffset);
+    ctx.bezierCurveTo(
+        -wingHalfSpan * 0.9, wingLeadingEdgeY + wingSweep + flapOffset - 2,
+        -wingHalfSpan * 0.5, wingLeadingEdgeY + flapOffset - 1,
+        -noseWidth * 0.4, wingLeadingEdgeY + flapOffset
+    );
+    ctx.closePath();
+    ctx.fill();
+    // 플랩 경계선을 그려주어 레이어를 더 명확히 함 (선택 사항)
+    ctx.strokeStyle = "rgba(0,0,0,0.2)";
+    ctx.lineWidth = 0.5;
+    ctx.stroke();
+
+
+    // --- 엔드플레이트 (윙 양 끝의 수직판) ---
+    ctx.fillStyle = palette.bodyTop;
+    const endplateTopY = wingLeadingEdgeY + wingSweep - 1;
+    const endplateBottomY = wingLeadingEdgeY + wingSweep + wingChord + 1;
+    const endplateWidth = 2;
+
     // 왼쪽 엔드플레이트
     ctx.beginPath();
-    ctx.moveTo(-frontWingSpan / 2 - 4, arrowTipY - 2);  // 앞쪽 끝
-    ctx.lineTo(-frontWingSpan / 2 - 5, arrowTipY);       // 뾰족한 끝
-    ctx.lineTo(-frontWingSpan / 2 - 2, arrowInnerY + 4); // 뒤쪽
-    ctx.lineTo(-frontWingSpan / 2 + 1, arrowInnerY + 4);
-    ctx.lineTo(-frontWingSpan / 2, arrowTipY - 2);
-    ctx.closePath();
+    ctx.rect(-wingHalfSpan - endplateWidth, endplateTopY, endplateWidth, endplateBottomY - endplateTopY);
     ctx.fill();
-    
+
     // 오른쪽 엔드플레이트
     ctx.beginPath();
-    ctx.moveTo(frontWingSpan / 2 + 4, arrowTipY - 2);
-    ctx.lineTo(frontWingSpan / 2 + 5, arrowTipY);
-    ctx.lineTo(frontWingSpan / 2 + 2, arrowInnerY + 4);
-    ctx.lineTo(frontWingSpan / 2 - 1, arrowInnerY + 4);
-    ctx.lineTo(frontWingSpan / 2, arrowTipY - 2);
-    ctx.closePath();
+    ctx.rect(wingHalfSpan, endplateTopY, endplateWidth, endplateBottomY - endplateTopY);
     ctx.fill();
 
     // ========================================
