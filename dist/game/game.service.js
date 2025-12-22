@@ -22,8 +22,8 @@ let GameService = class GameService {
     OFF_TRACK_DECELERATION = 80;
     BRAKE_POWER = 80;
     FRICTION = 40;
-    PIXELS_PER_METER = 8;
-    TRACK_WIDTH_PX = 100;
+    PIXELS_PER_METER = 15;
+    TRACK_WIDTH_PX = 120;
     trackCenterPaths = (() => {
         const paths = new Map();
         track_configs_1.trackServerConfigs.forEach((config, trackId) => {
@@ -34,8 +34,16 @@ let GameService = class GameService {
     })();
     MAX_STEER_ANGLE = Math.PI / 6.5;
     WHEEL_BASE_METERS = 3.0;
-    CHECKPOINT_RADIUS = 120;
-    START_LINE_HALF_LENGTH = 50;
+    getCheckpointRadius(trackName) {
+        if (trackName === 'basic-circuit') {
+            return 360;
+        }
+        if (trackName === 'monza') {
+            return 300;
+        }
+        return 120;
+    }
+    START_LINE_HALF_LENGTH = 60;
     getCheckpoints(trackName) {
         const config = track_configs_1.trackServerConfigs.get(trackName);
         if (config) {
@@ -63,7 +71,7 @@ let GameService = class GameService {
     BASE_LATERAL_GRIP = 11.0;
     DOWNFORCE_COEFF = 0.004;
     STEERING_RESPONSE_SPEED = 3.5;
-    STEERING_CENTERING_SPEED = 40.0;
+    STEERING_CENTERING_SPEED = 50.0;
     createRoom(hostId, hostNickname, roomName, carSkin, trackId) {
         const roomId = this.generateRoomId();
         const room = {
@@ -314,7 +322,7 @@ let GameService = class GameService {
         if (Math.abs(car.speed) < 0.1)
             car.speed = 0;
         const checkpoints = this.getCheckpoints(room.trackName);
-        this.updateCheckpointProgress(car, checkpoints);
+        this.updateCheckpointProgress(car, checkpoints, room.trackName);
         const crossDir = this.checkStartLineCross(prevPosition, car.position, room.trackName);
         if (crossDir === 'forward' && car.checkpoint >= checkpoints.length - 1) {
             car.lap += 1;
@@ -325,7 +333,7 @@ let GameService = class GameService {
             }
         }
     }
-    updateCheckpointProgress(car, checkpoints) {
+    updateCheckpointProgress(car, checkpoints, trackName) {
         const lastCheckpoint = car.checkpoint;
         if (lastCheckpoint >= checkpoints.length - 1) {
             return;
@@ -335,7 +343,8 @@ let GameService = class GameService {
         const dx = car.position.x - cp.x;
         const dy = car.position.y - cp.y;
         const distSq = dx * dx + dy * dy;
-        if (distSq <= this.CHECKPOINT_RADIUS * this.CHECKPOINT_RADIUS) {
+        const checkpointRadius = this.getCheckpointRadius(trackName);
+        if (distSq <= checkpointRadius * checkpointRadius) {
             car.checkpoint = nextCheckpoint;
         }
     }
@@ -431,8 +440,10 @@ let GameService = class GameService {
                 minDistSq = distSq;
             }
         }
-        const maxDist = this.TRACK_WIDTH_PX / 2 + 15;
-        return minDistSq <= maxDist * maxDist;
+        const trackWidth = this.TRACK_WIDTH_PX;
+        const margin = trackName === 'basic-circuit' ? 50 : 20;
+        const maxDist = trackWidth / 2 + margin;
+        return Math.sqrt(minDistSq) <= maxDist;
     }
     getRoom(roomId) {
         return this.rooms.get(roomId) || null;

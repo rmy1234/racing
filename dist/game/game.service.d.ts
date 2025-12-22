@@ -55,7 +55,7 @@ export declare class GameService {
     private readonly trackCenterPaths;
     private readonly MAX_STEER_ANGLE;
     private readonly WHEEL_BASE_METERS;
-    private readonly CHECKPOINT_RADIUS;
+    private getCheckpointRadius;
     private readonly START_LINE_HALF_LENGTH;
     private getCheckpoints;
     private getStartLine;

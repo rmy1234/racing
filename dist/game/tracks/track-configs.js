@@ -4,13 +4,13 @@ exports.trackServerConfigs = exports.monzaServerConfig = exports.basicCircuitSer
 exports.basicCircuitServerConfig = {
     buildCenterPath: function () {
         const points = [];
-        const cx = 1200;
-        const cy = 800;
-        const halfWidth = 760;
-        const halfHeight = 440;
-        const cornerRadius = 280;
-        const segmentsPerCorner = 8;
-        const segmentsPerStraight = 20;
+        const cx = 2250;
+        const cy = 1500;
+        const halfWidth = 2250;
+        const halfHeight = 1500;
+        const cornerRadius = 830;
+        const segmentsPerCorner = 16;
+        const segmentsPerStraight = 40;
         const addArc = (cxArc, cyArc, startAngle, endAngle) => {
             for (let i = 0; i <= segmentsPerCorner; i++) {
                 const t = i / segmentsPerCorner;
@@ -22,7 +22,7 @@ exports.basicCircuitServerConfig = {
             }
         };
         const addStraight = (x1, y1, x2, y2) => {
-            for (let i = 1; i < segmentsPerStraight; i++) {
+            for (let i = 0; i <= segmentsPerStraight; i++) {
                 const t = i / segmentsPerStraight;
                 points.push({
                     x: x1 + (x2 - x1) * t,
@@ -57,32 +57,33 @@ exports.basicCircuitServerConfig = {
         return points;
     },
     spawnPositions: [
-        { x: 1140, y: 1280 },
-        { x: 1220, y: 1280 },
-        { x: 1140, y: 1350 },
-        { x: 1220, y: 1350 },
-        { x: 1140, y: 1420 },
-        { x: 1220, y: 1420 },
-        { x: 1140, y: 1490 },
-        { x: 1220, y: 1490 },
+        { x: 2190, y: 2970 },
+        { x: 2310, y: 2970 },
+        { x: 2190, y: 2990 },
+        { x: 2310, y: 2990 },
+        { x: 2190, y: 3010 },
+        { x: 2310, y: 3010 },
+        { x: 2190, y: 3030 },
+        { x: 2310, y: 3030 },
     ],
     spawnAngle: 0,
     checkpoints: [
-        { x: 1860, y: 840, angle: -Math.PI / 2 },
-        { x: 1200, y: 420, angle: Math.PI },
-        { x: 520, y: 840, angle: Math.PI / 2 },
+        { x: 4204, y: 1636, angle: -Math.PI / 2 },
+        { x: 2250, y: 205, angle: Math.PI },
+        { x: 237, y: 1636, angle: Math.PI / 2 },
     ],
     startLine: {
-        x: 1200,
-        y: 1240,
+        x: 2250,
+        y: 3000,
         angle: 0,
     },
+    trackWidth: 120,
 };
 exports.monzaServerConfig = {
     buildCenterPath: function () {
         const points = [];
-        const SEG = 36;
-        const addStraight = (x1, y1, x2, y2, s = 40) => {
+        const SEG = 40;
+        const addStraight = (x1, y1, x2, y2, s = 30) => {
             for (let i = 0; i <= s; i++) {
                 const t = i / s;
                 points.push({
@@ -101,40 +102,47 @@ exports.monzaServerConfig = {
                 });
             }
         };
-        addStraight(5000, 3500, 1400, 3500, 90);
-        addCurve({ x: 1400, y: 3500 }, { x: 900, y: 3400 }, { x: 900, y: 2700 });
-        addStraight(900, 2700, 900, 1100, 70);
-        addCurve({ x: 900, y: 1100 }, { x: 1050, y: 800 }, { x: 1400, y: 700 });
-        addStraight(1400, 700, 2800, 1800, 80);
-        addCurve({ x: 2800, y: 1800 }, { x: 3200, y: 2200 }, { x: 3600, y: 2000 });
-        addStraight(3600, 2000, 5200, 2000, 80);
-        addCurve({ x: 5200, y: 2000 }, { x: 5900, y: 2400 }, { x: 5800, y: 3200 });
-        addCurve({ x: 5800, y: 3200 }, { x: 5600, y: 3700 }, { x: 5000, y: 3500 });
+        addStraight(5200, 3400, 1900, 3400, 80);
+        addCurve({ x: 1900, y: 3400 }, { x: 1700, y: 3400 }, { x: 1650, y: 3100 });
+        addCurve({ x: 1650, y: 3100 }, { x: 1700, y: 2500 }, { x: 1200, y: 2000 });
+        addStraight(1200, 2000, 1200, 1600, 30);
+        addCurve({ x: 1200, y: 1600 }, { x: 1050, y: 1400 }, { x: 1250, y: 1300 });
+        addStraight(1250, 1300, 1350, 1000, 20);
+        addCurve({ x: 1350, y: 1000 }, { x: 1400, y: 700 }, { x: 1700, y: 700 });
+        addStraight(1700, 700, 1900, 700, 20);
+        addCurve({ x: 1900, y: 700 }, { x: 2300, y: 700 }, { x: 2500, y: 1000 });
+        addStraight(2500, 1000, 3400, 2000, 70);
+        addCurve({ x: 3400, y: 2000 }, { x: 3500, y: 2300 }, { x: 3700, y: 2150 });
+        addCurve({ x: 3700, y: 2150 }, { x: 3800, y: 2000 }, { x: 4000, y: 2000 });
+        addStraight(4000, 2000, 5200, 2000, 60);
+        addCurve({ x: 5200, y: 2000 }, { x: 6000, y: 2200 }, { x: 5900, y: 3000 });
+        addCurve({ x: 5900, y: 3000 }, { x: 5800, y: 3400 }, { x: 5200, y: 3400 });
         return points;
     },
     spawnPositions: [
-        { x: 4900, y: 3470 },
-        { x: 4900, y: 3530 },
-        { x: 5100, y: 3470 },
-        { x: 5100, y: 3530 },
+        { x: 4900, y: 3370 },
+        { x: 4900, y: 3430 },
+        { x: 5100, y: 3370 },
+        { x: 5100, y: 3430 },
     ],
     spawnAngle: Math.PI,
     checkpoints: [
-        { x: 3200, y: 3500, angle: Math.PI },
-        { x: 1400, y: 3500, angle: Math.PI },
-        { x: 900, y: 3100, angle: -Math.PI / 2 },
-        { x: 900, y: 1900, angle: -Math.PI / 2 },
-        { x: 1200, y: 800, angle: Math.PI / 4 },
-        { x: 2100, y: 1250, angle: -Math.PI / 4 },
-        { x: 3200, y: 2000, angle: 0 },
-        { x: 4400, y: 2000, angle: 0 },
-        { x: 5600, y: 2800, angle: Math.PI / 2 },
+        { x: 3500, y: 3400, angle: Math.PI },
+        { x: 1650, y: 3100, angle: -Math.PI / 2 },
+        { x: 1200, y: 2000, angle: -Math.PI / 2 },
+        { x: 1250, y: 1300, angle: -Math.PI / 4 },
+        { x: 1700, y: 700, angle: 0 },
+        { x: 2900, y: 1500, angle: Math.PI / 4 },
+        { x: 4000, y: 2000, angle: 0 },
+        { x: 4600, y: 2000, angle: 0 },
+        { x: 5800, y: 2600, angle: Math.PI / 2 },
     ],
     startLine: {
         x: 5000,
-        y: 3500,
+        y: 3400,
         angle: Math.PI,
     },
+    trackWidth: 120,
 };
 exports.trackServerConfigs = new Map([
     ['basic-circuit', exports.basicCircuitServerConfig],

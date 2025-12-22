@@ -1,4 +1,4 @@
-export interface TrackServerConfig {
+export interface MonzaSharedConfig {
     buildCenterPath: () => Array<{
         x: number;
         y: number;
@@ -18,8 +18,9 @@ export interface TrackServerConfig {
         y: number;
         angle: number;
     };
-    trackWidth: number;
 }
-export declare const basicCircuitServerConfig: TrackServerConfig;
-export declare const monzaServerConfig: TrackServerConfig;
-export declare const trackServerConfigs: Map<string, TrackServerConfig>;
+export declare function buildMonzaCenterPath(): Array<{
+    x: number;
+    y: number;
+}>;
+export declare const monzaSharedConfig: MonzaSharedConfig;

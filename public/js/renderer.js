@@ -40,28 +40,48 @@ class Renderer {
     this.ctx.save();
     this.ctx.translate(-this.cameraX, -this.cameraY);
     
-    // 잔디 배경 (트랙 전체 크기에 맞춰 확장)
-    const gradient = this.ctx.createLinearGradient(0, 0, 0, this.currentTrack.height);
+    // 카메라가 보는 영역을 고려하여 충분히 큰 배경 영역 계산
+    const viewLeft = this.cameraX;
+    const viewTop = this.cameraY;
+    const viewRight = this.cameraX + this.canvas.width;
+    const viewBottom = this.cameraY + this.canvas.height;
+    
+    // 여유있게 배경 영역 확장 (화면 경계에서 500px 여유)
+    const padding = 500;
+    const bgLeft = Math.min(0, viewLeft - padding);
+    const bgTop = Math.min(0, viewTop - padding);
+    const bgRight = Math.max(this.currentTrack.width, viewRight + padding);
+    const bgBottom = Math.max(this.currentTrack.height, viewBottom + padding);
+    const bgWidth = bgRight - bgLeft;
+    const bgHeight = bgBottom - bgTop;
+    
+    // 잔디 배경 (카메라가 보는 영역을 충분히 덮도록)
+    const gradient = this.ctx.createLinearGradient(bgLeft, bgTop, bgLeft, bgBottom);
     gradient.addColorStop(0, '#2d5a27');
     gradient.addColorStop(0.5, '#1e4620');
     gradient.addColorStop(1, '#2d5a27');
     
     this.ctx.fillStyle = gradient;
-    this.ctx.fillRect(0, 0, this.currentTrack.width, this.currentTrack.height);
+    this.ctx.fillRect(bgLeft, bgTop, bgWidth, bgHeight);
     
-    // 잔디 텍스처 패턴
-    this.drawGrassPattern();
+    // 잔디 텍스처 패턴 (보이는 영역에만)
+    this.drawGrassPattern(bgLeft, bgTop, bgWidth, bgHeight);
     
     this.ctx.restore();
   }
   
-  drawGrassPattern() {
+  drawGrassPattern(bgLeft = 0, bgTop = 0, bgWidth = null, bgHeight = null) {
     this.ctx.fillStyle = 'rgba(0, 0, 0, 0.1)';
+    
+    // 배경 영역 크기가 지정되지 않으면 트랙 크기 사용
+    const width = bgWidth || this.currentTrack.width;
+    const height = bgHeight || this.currentTrack.height;
+    
     // 트랙 크기에 비례하여 패턴 수 증가
-    const patternCount = Math.floor((this.currentTrack.width * this.currentTrack.height) / 4800);
+    const patternCount = Math.floor((width * height) / 4800);
     for (let i = 0; i < patternCount; i++) {
-      const x = Math.random() * this.currentTrack.width;
-      const y = Math.random() * this.currentTrack.height;
+      const x = bgLeft + Math.random() * width;
+      const y = bgTop + Math.random() * height;
       this.ctx.fillRect(x, y, 2, 2);
     }
   }

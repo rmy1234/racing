@@ -9,23 +9,24 @@
 const BasicCircuitTrack = {
   name: '기본 서킷',
   id: 'basic-circuit',
-  width: 2400,
-  height: 1600,
+  width: 4500,
+  height: 3000,
   
   // 트랙 중앙선 경로 (수학적으로 정의된 둥근 사각형)
   // 전체 캔버스 기준으로 거의 완전한 직사각형 + 둥근 코너
   centerPath: (function () {
-    const cx = 1200;
-    const cy = 800;
-    const halfWidth = 760;
-    const halfHeight = 440;
-    const cornerRadius = 280;
+    const cx = 2250;
+    const cy = 1500;
+    const halfWidth = 2250;
+    const halfHeight = 1500;
+    const cornerRadius = 830;
 
     const points = [];
 
     // 각 코너를 작은 호(arc)와 직선 구간으로 구성 (좌하단 → 좌상단 → 우상단 → 우하단 → 좌하단)
-    const segmentsPerCorner = 8;
-    const segmentsPerStraight = 20;
+    // 트랙 크기가 커졌으므로 샘플링 밀도 증가
+    const segmentsPerCorner = 16;
+    const segmentsPerStraight = 40;
 
     function addArc(cxArc, cyArc, startAngle, endAngle) {
       for (let i = 0; i <= segmentsPerCorner; i++) {
@@ -39,7 +40,8 @@ const BasicCircuitTrack = {
     }
 
     function addStraight(x1, y1, x2, y2) {
-      for (let i = 1; i < segmentsPerStraight; i++) {
+      // 시작점과 끝점을 포함하여 더 많은 포인트 생성
+      for (let i = 0; i <= segmentsPerStraight; i++) {
         const t = i / segmentsPerStraight;
         points.push({
           x: x1 + (x2 - x1) * t,
@@ -89,24 +91,24 @@ const BasicCircuitTrack = {
     return points;
   })(),
   
-  trackWidth: 100,  // 트랙 폭 (차량 약 3.7대 분량)
+  trackWidth: 120,  // 트랙 폭 (모든 트랙에서 120으로 통일)
   
   // 체크포인트 (시계 방향, 하단 스타트 구간은 제외)
   // 차량이 시계 방향(오른쪽으로 출발)으로 달린다고 가정하고
   // 우측 → 상단 → 좌측 순서로 통과하도록 설정
   checkpoints: [
-    { x: 1860, y: 840, angle: -Math.PI / 2 },   // 우측 중앙 (↑)
-    { x: 1200, y: 420, angle: Math.PI },        // 상단 중앙 (←)
-    { x: 520, y: 840, angle: Math.PI / 2 },    // 좌측 중앙 (↓)
+    { x: 4204, y: 1636, angle: -Math.PI / 2 },   // 우측 중앙 (↑)
+    { x: 2250, y: 205, angle: Math.PI },        // 상단 중앙 (←)
+    { x: 237, y: 1636, angle: Math.PI / 2 },    // 좌측 중앙 (↓)
   ],
   
   // 시작 위치
   startLine: {
-    x: 1200,
-    // 트랙 하단 중앙선 위치 (centerPath 하단 y ≈ 1240)에 맞춤
-    y: 1240,
+    x: 2250,
+    // 트랙 하단 중앙선 위치 (centerPath 하단 y ≈ 3000)에 맞춤
+    y: 3000,
     // 트랙 폭과 동일하게
-    width: 100,
+    width: 120,
     angle: 0
   },
 
@@ -117,11 +119,11 @@ const BasicCircuitTrack = {
     // 서버 측 경로 생성 함수 (클라이언트 centerPath와 동일한 로직)
     buildCenterPath: function() {
       const points = [];
-      const cx = 1200;
-      const cy = 800;
-      const halfWidth = 760;
-      const halfHeight = 440;
-      const cornerRadius = 280;
+      const cx = 2250;
+      const cy = 1500;
+      const halfWidth = 2250;
+      const halfHeight = 1500;
+      const cornerRadius = 830;
       const segmentsPerCorner = 8;
       const segmentsPerStraight = 20;
 
@@ -176,16 +178,16 @@ const BasicCircuitTrack = {
       return points;
     },
 
-    // 스폰 위치 (8개 그리드)
+    // 스폰 위치 (8개 그리드) - startLine(y=3000) 근처에 배치
     spawnPositions: [
-      { x: 1140, y: 1280 },
-      { x: 1220, y: 1280 },
-      { x: 1140, y: 1350 },
-      { x: 1220, y: 1350 },
-      { x: 1140, y: 1420 },
-      { x: 1220, y: 1420 },
-      { x: 1140, y: 1490 },
-      { x: 1220, y: 1490 },
+      { x: 2190, y: 2970 },
+      { x: 2310, y: 2970 },
+      { x: 2190, y: 2990 },
+      { x: 2310, y: 2990 },
+      { x: 2190, y: 3010 },
+      { x: 2310, y: 3010 },
+      { x: 2190, y: 3030 },
+      { x: 2310, y: 3030 },
     ],
 
     // 초기 각도
@@ -239,7 +241,7 @@ const BasicCircuitTrack = {
       minDist = Math.min(minDist, dist);
     }
     
-    return minDist < this.trackWidth / 2 + 10; // 약간의 여유
+    return minDist < this.trackWidth / 2 + 50; // 트랙 크기에 맞게 여유 증가
   },
   
   // 가장 가까운 체크포인트 인덱스 반환
@@ -264,7 +266,7 @@ const BasicCircuitTrack = {
   
   // 체크포인트 통과 확인
   checkCheckpoint(x, y, lastCheckpoint) {
-    const checkpointRadius = 120;
+    const checkpointRadius = 360; // 트랙 크기에 맞게 증가 (원래 120 * 3)
     const nextCheckpoint = (lastCheckpoint + 1) % this.checkpoints.length;
     const cp = this.checkpoints[nextCheckpoint];
     
@@ -283,12 +285,12 @@ const BasicCircuitTrack = {
   curbs: (function () {
     const curbs = [];
 
-    const cx = 1200;
-    const cy = 800;
-    const halfWidth = 760;
-    const halfHeight = 440;
-    const cornerRadius = 280;
-    const trackWidth = 100;
+    const cx = 2250;
+    const cy = 1500;
+    const halfWidth = 2250;
+    const halfHeight = 1500;
+    const cornerRadius = 830;
+    const trackWidth = 120;
 
     const curbOffset = 8; // 중앙선에서 안쪽으로 더 들어가도록
     const innerRadius = cornerRadius - trackWidth / 2 - curbOffset;
@@ -364,9 +366,48 @@ const BasicCircuitTrack = {
   })()
 };
 
-// 둥근 사각형은 이미 부드럽게 생성했으므로 그대로 사용
-BasicCircuitTrack.getSmoothPath = function () {
-  return this.centerPath;
+// 부드러운 경로 생성 (Catmull-Rom 스플라인 보간)
+BasicCircuitTrack.getSmoothPath = function (targetPoints = 400) {
+  const path = this.centerPath;
+  if (path.length < 4) return path;
+  
+  // 경로를 부드럽게 보간
+  const smoothPath = [];
+  const numPoints = path.length;
+  
+  // 각 세그먼트를 더 많은 포인트로 보간
+  for (let i = 0; i < numPoints; i++) {
+    const p0 = path[(i - 1 + numPoints) % numPoints];
+    const p1 = path[i];
+    const p2 = path[(i + 1) % numPoints];
+    const p3 = path[(i + 2) % numPoints];
+    
+    // Catmull-Rom 스플라인 보간
+    const steps = Math.ceil(targetPoints / numPoints);
+    for (let j = 0; j < steps; j++) {
+      const t = j / steps;
+      const t2 = t * t;
+      const t3 = t2 * t;
+      
+      const x = 0.5 * (
+        (2 * p1.x) +
+        (-p0.x + p2.x) * t +
+        (2 * p0.x - 5 * p1.x + 4 * p2.x - p3.x) * t2 +
+        (-p0.x + 3 * p1.x - 3 * p2.x + p3.x) * t3
+      );
+      
+      const y = 0.5 * (
+        (2 * p1.y) +
+        (-p0.y + p2.y) * t +
+        (2 * p0.y - 5 * p1.y + 4 * p2.y - p3.y) * t2 +
+        (-p0.y + 3 * p1.y - 3 * p2.y + p3.y) * t3
+      );
+      
+      smoothPath.push({ x, y });
+    }
+  }
+  
+  return smoothPath;
 };
 
 // 트랙 등록 (registerTrack 함수가 정의되어 있는 경우)

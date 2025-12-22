@@ -1,17 +1,17 @@
 // ============================================
-// 몬차 서킷 (Autodromo Nazionale Monza) - Realistic Minimap Ver.
-//  - 공식 트랙맵(2번째 이미지) 비율에 맞춘 미니맵
-//  - centerPath / serverConfig.buildCenterPath 완전 동일 로직(불일치 방지)
-//  - 연석(curbs) 위치 재배치 (트랙 가장자리로 더 붙임)
+// 몬차 서킷 (Autodromo Nazionale Monza) - Realistic Corner Ver.
+//  - 01, 02, 03 (Rettifilo & Curva Grande): 급격한 시케인 후 완만한 코너 구현
+//  - 04, 05 (Roggia): 뚜렷한 S자 시케인으로 수정
+//  - 08, 09, 10 (Ascari): 깊은 굴곡의 연속 S자 (물결 모양) 구현
 // ============================================
 
 function buildMonzaCenterPath() {
   const points = [];
-  const SEG = 36;
+  const SEG = 40;
 
-  function addStraight(x1, y1, x2, y2, s = 40) {
-    for (let i = 0; i <= s; i++) {
-      const t = i / s;
+  function addStraight(x1, y1, x2, y2, steps = 30) {
+    for (let i = 0; i <= steps; i++) {
+      const t = i / steps;
       points.push({
         x: x1 + (x2 - x1) * t,
         y: y1 + (y2 - y1) * t
@@ -19,9 +19,9 @@ function buildMonzaCenterPath() {
     }
   }
 
-  function addCurve(p0, p1, p2, s = SEG) {
-    for (let i = 0; i <= s; i++) {
-      const t = i / s;
+  function addCurve(p0, p1, p2, steps = SEG) {
+    for (let i = 0; i <= steps; i++) {
+      const t = i / steps;
       const u = 1 - t;
       points.push({
         x: u * u * p0.x + 2 * u * t * p1.x + t * t * p2.x,
@@ -30,100 +30,130 @@ function buildMonzaCenterPath() {
     }
   }
 
-  // 1. Start / Finish
-  addStraight(5000, 3500, 1400, 3500, 90);
+  // --- 트랙 구현 시작 (Start -> 01 -> ... -> 11) ---
 
-  // 2. Curva Grande
+  // Start/Finish 직선 (메인 스트레이트)
+  addStraight(5200, 3400, 1900, 3400, 80);
+
+  // [수정] 01, 02, 03: Rettifilo 시케인 & Curva Grande
+  // 급격한 'ㄱ'자 시케인 구현
   addCurve(
-    { x: 1400, y: 3500 },
-    { x: 900, y: 3400 },
-    { x: 900, y: 2700 }
+    { x: 1900, y: 3400 }, // 진입
+    { x: 1700, y: 3400 }, // 제어점 1 (직선 끝까지 유지)
+    { x: 1650, y: 3100 }  // 탈출 (급격히 위로)
+  );
+  // Curva Grande: 더 크고 완만하게
+  addCurve(
+    { x: 1650, y: 3100 },
+    { x: 1700, y: 2500 }, // 바깥으로 크게 돔
+    { x: 1200, y: 2000 }  // 상단 진입점
   );
 
-  // 3. Sector 2 straight
-  addStraight(900, 2700, 900, 1100, 70);
+  // Roggia 진입 직선
+  addStraight(1200, 2000, 1200, 1600, 30);
 
-  // 4. 상단 자연스러운 코너
+  // [수정] 04, 05: Variante della Roggia
+  // 더 뚜렷한 S자 시케인
   addCurve(
-    { x: 900, y: 1100 },
-    { x: 1050, y: 800 },
-    { x: 1400, y: 700 }
+    { x: 1200, y: 1600 },
+    { x: 1050, y: 1400 }, // 안쪽으로 깊게 제어
+    { x: 1250, y: 1300 }  // 바깥으로 탈출
   );
 
-  // 5. DRS Zone (완만한 대각)
-  addStraight(1400, 700, 2800, 1800, 80);
+  // Lesmo 진입 짧은 직선
+  addStraight(1250, 1300, 1350, 1000, 20);
 
-  // 6. Ascari – ★ 진짜 곡선 ★
+  // 06, 07: Curve di Lesmo (기존 유지)
   addCurve(
-    { x: 2800, y: 1800 },
-    { x: 3200, y: 2200 },
-    { x: 3600, y: 2000 }
+    { x: 1350, y: 1000 },
+    { x: 1400, y: 700 },
+    { x: 1700, y: 700 }
+  );
+  addStraight(1700, 700, 1900, 700, 20);
+  addCurve(
+    { x: 1900, y: 700 },
+    { x: 2300, y: 700 },
+    { x: 2500, y: 1000 }
   );
 
-  // 7. Back Straight
-  addStraight(3600, 2000, 5200, 2000, 80);
+  // 대각선 직선 (Serraglio)
+  addStraight(2500, 1000, 3400, 2000, 70);
 
-  // 8. Parabolica
+  // [수정] 08, 09, 10: Variante Ascari
+  // 깊은 굴곡의 연속 S자 (물결 모양)
+  addCurve(
+    { x: 3400, y: 2000 },
+    { x: 3500, y: 2300 }, // 첫 번째 깊은 굴곡 (아래로)
+    { x: 3700, y: 2150 }  // 중간 지점
+  );
+  addCurve(
+    { x: 3700, y: 2150 },
+    { x: 3800, y: 2000 }, // 두 번째 굴곡 (위로 복귀)
+    { x: 4000, y: 2000 }  // 탈출 (직선 라인 복귀)
+  );
+
+  // Back Straight (뒷 직선)
+  addStraight(4000, 2000, 5200, 2000, 60);
+
+  // 11: Curva Parabolica (기존 유지)
   addCurve(
     { x: 5200, y: 2000 },
-    { x: 5900, y: 2400 },
-    { x: 5800, y: 3200 }
+    { x: 6000, y: 2200 },
+    { x: 5900, y: 3000 }
   );
   addCurve(
-    { x: 5800, y: 3200 },
-    { x: 5600, y: 3700 },
-    { x: 5000, y: 3500 }
+    { x: 5900, y: 3000 },
+    { x: 5800, y: 3400 },
+    { x: 5200, y: 3400 }
   );
 
   return points;
 }
 
-
-
 const MonzaTrack = {
   name: '몬차 서킷',
   id: 'monza',
-  width: 6000,
-  height: 4000,
+  width: 8000,
+  height: 5000,
 
   centerPath: buildMonzaCenterPath(),
 
-  trackWidth: 100,
+  trackWidth: 120,  // 트랙 폭 (모든 트랙에서 120으로 통일)
 
-  // 체크포인트: 새로운 경로에 맞게 재배치
+  // 체크포인트 (경로 변경에 맞춰 대략적인 위치 유지)
   checkpoints: [
-    { x: 3200, y: 3500, angle: Math.PI },        // 메인 스트레이트 중간 (왼쪽 진행)
-    { x: 1400, y: 3500, angle: Math.PI },        // Curva Grande 진입 전
-    { x: 900, y: 3100, angle: -Math.PI / 2 },    // Curva Grande 중간
-    { x: 900, y: 1900, angle: -Math.PI / 2 },    // 좌측 세로 구간 중간
-    { x: 1200, y: 800, angle: Math.PI / 4 },      // 상단 코너 중간
-    { x: 2100, y: 1250, angle: -Math.PI / 4 },   // DRS Zone 중간
-    { x: 3200, y: 2000, angle: 0 },               // Ascari 중간
-    { x: 4400, y: 2000, angle: 0 },              // Back Straight 중간
-    { x: 5600, y: 2800, angle: Math.PI / 2 },    // Parabolica 중간
+    { x: 3500, y: 3400, angle: Math.PI },       // 메인 스트레이트
+    { x: 1650, y: 3100, angle: -Math.PI/2 },    // 02번 탈출
+    { x: 1200, y: 2000, angle: -Math.PI/2 },    // 03번 탈출
+    { x: 1250, y: 1300, angle: -Math.PI/4 },    // 05번 탈출
+    { x: 1700, y: 700,  angle: 0 },             // Lesmo 사이
+    { x: 2900, y: 1500, angle: Math.PI/4 },     // 대각선 중간
+    { x: 4000, y: 2000, angle: 0 },             // 10번(Ascari) 탈출
+    { x: 4600, y: 2000, angle: 0 },             // Back Straight
+    { x: 5800, y: 2600, angle: Math.PI/2 },     // Parabolica 중간
   ],
 
   startLine: {
     x: 5000,
-    y: 3500,
-    width: 120,
-    angle: Math.PI // ← 왼쪽
+    y: 3400,
+    width: 120,  // 트랙 폭과 동일
+    angle: Math.PI
   },
   
   serverConfig: {
     buildCenterPath: buildMonzaCenterPath,
   
     spawnPositions: [
-      { x: 4900, y: 3470 },
-      { x: 4900, y: 3530 },
-      { x: 5100, y: 3470 },
-      { x: 5100, y: 3530 },
+      { x: 4900, y: 3370 },
+      { x: 4900, y: 3430 },
+      { x: 5100, y: 3370 },
+      { x: 5100, y: 3430 },
     ],
   
-    spawnAngle: Math.PI // ← 왼쪽 출발
+    spawnAngle: Math.PI 
   },
   
-
+  // (기존 로직 유지)
   getTrackBounds() {
     const innerPath = [];
     const outerPath = [];
@@ -156,7 +186,7 @@ const MonzaTrack = {
       const d = Math.sqrt(dx * dx + dy * dy);
       if (d < minDist) minDist = d;
     }
-    return minDist < this.trackWidth / 2 + 15;
+    return minDist < this.trackWidth / 2 + 20;
   },
 
   getNearestCheckpoint(x, y) {
@@ -173,7 +203,7 @@ const MonzaTrack = {
   },
 
   checkCheckpoint(x, y, lastCheckpoint) {
-    const checkpointRadius = 260;
+    const checkpointRadius = 300;
     const nextCheckpoint = (lastCheckpoint + 1) % this.checkpoints.length;
     const cp = this.checkpoints[nextCheckpoint];
     const dx = x - cp.x;
@@ -183,74 +213,7 @@ const MonzaTrack = {
     return lastCheckpoint;
   },
 
-  // ============================================
-  // 연석(curbs): 트랙 전체를 따라 연속적으로 배치
-  // ============================================
-// ============================================
-// 연석(curbs): 실제 F1 서킷 방식
-//  - 곡선 구간에만 배치
-//  - 코너 안쪽에만 생성
-//  - Monza 스타일 (짧고 연속적인 연석)
-// ============================================
-curbs: (function () {
-  const curbs = [];
-  const path = buildMonzaCenterPath();
-
-  const trackWidth = 100;
-  const halfWidth = trackWidth / 2;
-  const curbOffset = 6;
-
-  const CURVE_THRESHOLD = 0.06;
-  const STEP = 2;
-
-  function curvature(p0, p1, p2) {
-    const v1x = p1.x - p0.x;
-    const v1y = p1.y - p0.y;
-    const v2x = p2.x - p1.x;
-    const v2y = p2.y - p1.y;
-
-    const dot = v1x * v2x + v1y * v2y;
-    const len = Math.hypot(v1x, v1y) * Math.hypot(v2x, v2y);
-    return Math.acos(dot / (len + 0.0001));
-  }
-
-  for (let i = 2; i < path.length - 2; i += STEP) {
-    const p0 = path[i - 1];
-    const p1 = path[i];
-    const p2 = path[i + 1];
-
-    if (curvature(p0, p1, p2) < CURVE_THRESHOLD) continue;
-
-    // 평균 접선
-    const dx = p2.x - p0.x;
-    const dy = p2.y - p0.y;
-    const len = Math.hypot(dx, dy) || 1;
-
-    const tx = dx / len;
-    const ty = dy / len;
-
-    // 외적으로 안쪽 판별
-    const cross =
-      (p1.x - p0.x) * (p2.y - p1.y) -
-      (p1.y - p0.y) * (p2.x - p1.x);
-
-    const nx = cross > 0 ? -ty : ty;
-    const ny = cross > 0 ? tx : -tx;
-
-    curbs.push({
-      x: p1.x + nx * (halfWidth + curbOffset),
-      y: p1.y + ny * (halfWidth + curbOffset),
-      width: 14,
-      height: 6,
-      angle: Math.atan2(ty, tx),
-      type: 'curb'
-    });
-  }
-
-  return curbs;
-})()
-
-
+  curbs: [] 
 };
 
 MonzaTrack.getSmoothPath = function () { return this.centerPath; };

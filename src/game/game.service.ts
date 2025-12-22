@@ -85,8 +85,8 @@ export class GameService {
   private readonly OFF_TRACK_DECELERATION = 80;
   private readonly BRAKE_POWER = 80; // 브레이크 감속 km/h per second
   private readonly FRICTION = 40; // 자연 감속 km/h per second (가속 버튼에서 손 떼면 더 빨리 감속)
-  private readonly PIXELS_PER_METER = 8; // 1m를 몇 px로 볼지 (속도감 향상을 위해 6에서 12로 증가)
-  private readonly TRACK_WIDTH_PX = 100; // 트랙 폭 (Track.trackWidth와 동일, 차량 약 3.7대 분량)
+  private readonly PIXELS_PER_METER = 15; // 1m를 몇 px로 볼지 (속도감 향상을 위해 6에서 12로 증가)
+  private readonly TRACK_WIDTH_PX = 120; // 트랙 폭 (모든 트랙에서 통일 사용)
   // 트랙별 중앙선 경로 맵
   // - 각 트랙의 중심선 좌표 배열을 저장
   // - 트랙 안/밖 판정(isOnTrack)에 사용
@@ -116,8 +116,19 @@ export class GameService {
   private readonly WHEEL_BASE_METERS = 3.0;
 
   // 클라이언트 Track.checkpoints 와 동일한 체크포인트 (시계 방향)
-  private readonly CHECKPOINT_RADIUS = 120; // 체크포인트 판정 반경
-  private readonly START_LINE_HALF_LENGTH = 50; // 트랙 폭 100 기준 절반
+  // 트랙별 체크포인트 반경 (기본값: 120)
+  private getCheckpointRadius(trackName: string): number {
+    // 기본 서킷은 크기가 커졌으므로 반경도 증가
+    if (trackName === 'basic-circuit') {
+      return 360; // 원래 120 * 3
+    }
+    // 몬차 서킷은 원래 크기 유지
+    if (trackName === 'monza') {
+      return 300; // 클라이언트와 동일
+    }
+    return 120; // 기본값
+  }
+  private readonly START_LINE_HALF_LENGTH = 60; // 트랙 폭 120 기준 절반
 
   // 트랙별 체크포인트 정보
   private getCheckpoints(trackName: string): Vector2D[] {
@@ -180,7 +191,7 @@ export class GameService {
   // - 실제 F1: 파워 스티어링의 센터링 포스로 핸들이 자동으로 중앙 복귀
   // - 값이 클수록 빠르게 중앙으로 돌아감
   // - 현재: 20.0 (매우 빠른 센터링 - 손 떼면 즉시 직진)
-  private readonly STEERING_CENTERING_SPEED = 40.0;
+  private readonly STEERING_CENTERING_SPEED = 50.0;
 
 
 
@@ -582,7 +593,7 @@ export class GameService {
     // 8️⃣ 체크포인트 & 랩
     // =========================
     const checkpoints = this.getCheckpoints(room.trackName);
-    this.updateCheckpointProgress(car, checkpoints);
+    this.updateCheckpointProgress(car, checkpoints, room.trackName);
   
     const crossDir = this.checkStartLineCross(prevPosition, car.position, room.trackName);
     // 모든 체크포인트를 통과한 상태에서 스타트 라인을 정방향으로 통과하면 랩 완료
@@ -599,7 +610,7 @@ export class GameService {
   
 
   // 체크포인트를 올바른 순서로 통과했는지 진행도 업데이트
-  private updateCheckpointProgress(car: CarState, checkpoints: Vector2D[]): void {
+  private updateCheckpointProgress(car: CarState, checkpoints: Vector2D[], trackName: string): void {
     const lastCheckpoint = car.checkpoint;
 
     // 이미 마지막 체크포인트까지 통과했다면 더 이상 진행도는 올리지 않음
@@ -614,7 +625,8 @@ export class GameService {
     const dy = car.position.y - cp.y;
     const distSq = dx * dx + dy * dy;
 
-    if (distSq <= this.CHECKPOINT_RADIUS * this.CHECKPOINT_RADIUS) {
+    const checkpointRadius = this.getCheckpointRadius(trackName);
+    if (distSq <= checkpointRadius * checkpointRadius) {
       car.checkpoint = nextCheckpoint;
     }
   }
@@ -740,7 +752,7 @@ export class GameService {
   }
 
   // 중앙선으로부터의 최소 거리를 이용해 트랙 안/밖 판정
-  // 클라이언트와 동일한 판정 범위 사용 (trackWidth / 2 + 15)
+  // 클라이언트와 동일한 판정 범위 사용 (trackWidth / 2 + 여유값)
   private isOnTrack(position: Vector2D, trackName: string): boolean {
     const centerPath = this.trackCenterPaths.get(trackName) || this.trackCenterPaths.get('basic-circuit')!;
     let minDistSq = Infinity;
@@ -754,9 +766,13 @@ export class GameService {
       }
     }
 
-    // 클라이언트와 동일: trackWidth(100) / 2 + 15 = 65
-    const maxDist = this.TRACK_WIDTH_PX / 2 + 15;
-    return minDistSq <= maxDist * maxDist;
+    // 모든 트랙에서 TRACK_WIDTH_PX 상수 사용
+    const trackWidth = this.TRACK_WIDTH_PX;
+    // 클라이언트와 동일: trackWidth / 2 + 여유값
+    // 기본 서킷은 트랙 크기가 커졌으므로 여유값을 더 크게 설정
+    const margin = trackName === 'basic-circuit' ? 50 : 20;
+    const maxDist = trackWidth / 2 + margin;
+    return Math.sqrt(minDistSq) <= maxDist;
   }
 
   getRoom(roomId: string): GameRoom | null {
