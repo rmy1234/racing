@@ -9,25 +9,69 @@ class Network {
   
   connect() {
     return new Promise((resolve, reject) => {
+      // 이미 연결되어 있으면 즉시 resolve
+      if (this.socket && this.connected) {
+        resolve();
+        return;
+      }
+      
       this.socket = io({
-        transports: ['websocket', 'polling']
+        transports: ['websocket', 'polling'],
+        reconnection: true,
+        reconnectionDelay: 1000,
+        reconnectionDelayMax: 5000,
+        reconnectionAttempts: 5
       });
       
-      this.socket.on('connect', () => {
+      let resolved = false;
+      let timeoutId = null;
+      
+      // 연결 성공 핸들러
+      const onConnect = () => {
+        if (resolved) return;
+        resolved = true;
         console.log('Connected to server');
         this.connected = true;
         this.playerId = this.socket.id;
+        if (timeoutId) clearTimeout(timeoutId);
         resolve();
-      });
+      };
+      
+      // 연결 에러 핸들러 (재연결을 위해 reject하지 않음)
+      const onConnectError = (error) => {
+        console.warn('Connection error (will retry):', error);
+        // 에러를 기록하지만 reject하지 않음 - Socket.IO가 자동으로 재연결 시도
+      };
+      
+      // 연결 실패 핸들러 (재연결 시도 실패 시)
+      const onReconnectFailed = () => {
+        if (resolved) return;
+        resolved = true;
+        console.error('Failed to reconnect after all attempts');
+        if (timeoutId) clearTimeout(timeoutId);
+        reject(new Error('서버에 연결할 수 없습니다. 서버가 실행 중인지 확인해주세요.'));
+      };
+      
+      this.socket.on('connect', onConnect);
+      this.socket.on('connect_error', onConnectError);
+      this.socket.on('reconnect_failed', onReconnectFailed);
+      
+      // 타임아웃 설정 (10초 내에 연결되지 않으면 에러)
+      timeoutId = setTimeout(() => {
+        if (!resolved) {
+          resolved = true;
+          // 연결이 진행 중이면 조금 더 기다림
+          if (this.socket && this.socket.connected) {
+            onConnect();
+          } else {
+            reject(new Error('서버 연결 시간이 초과되었습니다.'));
+          }
+        }
+      }, 10000);
       
       this.socket.on('disconnect', () => {
         console.log('Disconnected from server');
         this.connected = false;
-      });
-      
-      this.socket.on('connect_error', (error) => {
-        console.error('Connection error:', error);
-        reject(error);
       });
       
       // 이벤트 리스너 등록

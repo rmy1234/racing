@@ -32,17 +32,38 @@ class Game {
   
   async init() {
     try {
-      await this.network.connect();
+      // 서버 연결 시도 (재연결을 고려하여 에러 처리 개선)
+      try {
+        await this.network.connect();
+      } catch (error) {
+        // 연결 실패 시에도 게임은 계속 진행 (오프라인 모드 또는 재연결 대기)
+        console.warn('Initial connection failed, but will retry:', error);
+        // 사용자에게 알림만 표시하고 게임은 계속 진행
+        // Socket.IO가 자동으로 재연결을 시도하므로 게임은 정상 작동할 수 있음
+      }
+      
       this.localPlayerId = this.network.playerId;
       
       this.canvas = document.getElementById('gameCanvas');
       this.renderer = new Renderer(this.canvas);
       
+      // localStorage에서 데이터 복원
+      this.loadFromStorage();
+      
       this.setupEventListeners();
       this.setupNetworkListeners();
       
-      // 초기 방 목록 요청
-      this.network.getRooms();
+      // 연결이 성공한 경우에만 방 목록 요청
+      if (this.network.connected) {
+        this.network.getRooms();
+      } else {
+        // 연결되지 않았으면 잠시 후 재시도
+        setTimeout(() => {
+          if (this.network.connected) {
+            this.network.getRooms();
+          }
+        }, 2000);
+      }
       
       // 임시: 차량 미리보기 초기화 (추후 제거 예정)
       this.initCarPreview();
@@ -56,7 +77,92 @@ class Game {
       console.log('Game initialized');
     } catch (error) {
       console.error('Failed to initialize game:', error);
-      alert('서버 연결에 실패했습니다.');
+      // 치명적인 에러가 아닌 경우에만 알림 표시
+      if (error.message && error.message.includes('서버')) {
+        // 서버 연결 관련 에러는 조용히 처리 (재연결 시도 중)
+      } else {
+        alert('게임 초기화 중 오류가 발생했습니다: ' + error.message);
+      }
+    }
+  }
+  
+  // localStorage에 저장
+  saveToStorage() {
+    try {
+      localStorage.setItem('game_nickname', this.nickname);
+      localStorage.setItem('game_selectedTrackId', this.selectedTrackId);
+      localStorage.setItem('game_carColor', JSON.stringify(this.carColor));
+      
+      // 현재 화면 저장
+      const currentScreen = Object.keys(this.screens).find(key => 
+        this.screens[key] && this.screens[key].classList.contains('active')
+      );
+      if (currentScreen) {
+        localStorage.setItem('game_currentScreen', currentScreen);
+      }
+      
+      // 현재 방 정보 저장
+      if (this.currentRoom) {
+        localStorage.setItem('game_currentRoom', JSON.stringify(this.currentRoom));
+      }
+      
+      // 게임 상태 저장 (레이스 중인 경우)
+      if (this.gameState) {
+        localStorage.setItem('game_gameState', JSON.stringify(this.gameState));
+      }
+    } catch (e) {
+      console.warn('저장 실패:', e);
+    }
+  }
+  
+  // localStorage에서 복원
+  loadFromStorage() {
+    try {
+      const savedNickname = localStorage.getItem('game_nickname');
+      const savedTrackId = localStorage.getItem('game_selectedTrackId');
+      const savedCarColor = localStorage.getItem('game_carColor');
+      const savedScreen = localStorage.getItem('game_currentScreen');
+      
+      if (savedNickname) {
+        this.nickname = savedNickname;
+        const nicknameInput = document.getElementById('nickname');
+        if (nicknameInput) {
+          nicknameInput.value = savedNickname;
+        }
+      }
+      
+      if (savedTrackId) {
+        this.selectedTrackId = savedTrackId;
+      }
+      
+      if (savedCarColor) {
+        this.carColor = JSON.parse(savedCarColor);
+        const colorPicker = document.getElementById('carColorPicker');
+        if (colorPicker) {
+          const color = this.carColor;
+          const hexColor = `#${[color.r, color.g, color.b].map(x => {
+            const hex = x.toString(16);
+            return hex.length === 1 ? '0' + hex : hex;
+          }).join('')}`;
+          colorPicker.value = hexColor;
+          this.updateCarPreview();
+        }
+      }
+      
+      // 화면 복원은 네트워크 연결 후에 처리
+      if (savedScreen && savedScreen !== 'lobby') {
+        // 방 정보 복원 시도
+        const savedRoom = localStorage.getItem('game_currentRoom');
+        if (savedRoom) {
+          try {
+            this.currentRoom = JSON.parse(savedRoom);
+          } catch (e) {
+            console.warn('방 정보 복원 실패:', e);
+          }
+        }
+      }
+    } catch (e) {
+      console.warn('복원 실패:', e);
     }
   }
   
@@ -109,6 +215,8 @@ class Game {
         if (trackSelect) {
           trackSelect.value = track.id;
         }
+        
+        this.saveToStorage(); // 저장
       });
       
       // 기본 선택된 옵션 표시
@@ -177,6 +285,7 @@ class Game {
         
         // 게임 객체에 색상 저장
         this.carColor = rgb;
+        this.saveToStorage(); // 저장
       }
     };
 
@@ -233,9 +342,12 @@ class Game {
   setupEventListeners() {
     // 닉네임 입력
     const nicknameInput = document.getElementById('nickname');
-    nicknameInput.addEventListener('input', (e) => {
-      this.nickname = e.target.value.trim();
-    });
+    if (nicknameInput) {
+      nicknameInput.addEventListener('input', (e) => {
+        this.nickname = e.target.value.trim();
+        this.saveToStorage(); // 저장
+      });
+    }
     
     // 방 만들기 버튼
     document.getElementById('createRoomBtn').addEventListener('click', () => {
@@ -292,12 +404,14 @@ class Game {
     this.network.on('roomCreated', (room) => {
       this.currentRoom = room;
       this.showWaitingRoom(room);
+      this.saveToStorage(); // 저장
     });
     
     // 방 참가됨
     this.network.on('roomJoined', (room) => {
       this.currentRoom = room;
       this.showWaitingRoom(room);
+      this.saveToStorage(); // 저장
     });
     
     // 참가 에러
@@ -324,6 +438,7 @@ class Game {
       this.gameState = null;
       this.currentRoom = null;
       this.showScreen('lobby');
+      this.saveToStorage(); // 저장
       this.network.getRooms();
     });
     
@@ -335,6 +450,7 @@ class Game {
     // 레이스 시작
     this.network.on('raceStart', (data) => {
       this.startRace(data.room);
+      this.saveToStorage(); // 저장
     });
     
     // 게임 상태 업데이트
@@ -356,6 +472,7 @@ class Game {
         });
       }
       this.gameState = state;
+      this.saveToStorage(); // 저장
     });
     
     // 레이스 종료
@@ -405,6 +522,7 @@ class Game {
       screen.classList.remove('active');
     });
     this.screens[screenName].classList.add('active');
+    this.saveToStorage(); // 저장
   }
   
   updateRoomList(rooms) {

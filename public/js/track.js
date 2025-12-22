@@ -31,9 +31,16 @@ function getTrack(trackId) {
   const trackInfo = TRACKS[trackId];
   if (!trackInfo || !trackInfo.data) {
     // 기본값으로 기본 서킷 반환
-    return TRACKS['basic-circuit'].data;
+    return TRACKS['basic-circuit']?.data || null;
   }
   return trackInfo.data;
+}
+
+// 전역 스코프에 노출 (트랙 편집기에서 사용)
+if (typeof window !== 'undefined') {
+  window.TRACKS = TRACKS;
+  window.getTrack = getTrack;
+  window.registerTrack = registerTrack;
 }
 
 // 사용 가능한 모든 트랙 목록 반환
