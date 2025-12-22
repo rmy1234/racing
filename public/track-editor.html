@@ -789,14 +789,19 @@
         return { x: canvasX, y: canvasY };
       }
       
-      getCanvasPoint(e) {
+      getCanvasPoint(e, round = true) {
         const rect = this.canvas.getBoundingClientRect();
         const canvasX = e.clientX - rect.left;
         const canvasY = e.clientY - rect.top;
         
         // 줌과 오프셋을 고려하여 월드 좌표로 변환
         const world = this.canvasToWorld(canvasX, canvasY);
-        return { x: Math.round(world.x), y: Math.round(world.y) };
+        // 연석 이동 시 부드러운 이동을 위해 반올림 옵션 추가
+        if (round) {
+          return { x: Math.round(world.x), y: Math.round(world.y) };
+        } else {
+          return { x: world.x, y: world.y };
+        }
       }
 
       findPointAt(x, y, radius = 10) {
@@ -905,9 +910,10 @@
           const p1 = innerPath[i];
           const p2 = innerPath[i + 1];
           
-          // 세그먼트를 더 세밀하게 샘플링 (5개 점으로)
-          for (let j = 0; j <= 5; j++) {
-            const t = j / 5;
+          // 세그먼트를 더 세밀하게 샘플링 (20개 점으로 증가하여 부드러운 이동)
+          const sampleCount = 20;
+          for (let j = 0; j <= sampleCount; j++) {
+            const t = j / sampleCount;
             const px = p1.x + (p2.x - p1.x) * t;
             const py = p1.y + (p2.y - p1.y) * t;
             const dx = x - px;
@@ -927,9 +933,10 @@
           const p1 = outerPath[i];
           const p2 = outerPath[i + 1];
           
-          // 세그먼트를 더 세밀하게 샘플링 (5개 점으로)
-          for (let j = 0; j <= 5; j++) {
-            const t = j / 5;
+          // 세그먼트를 더 세밀하게 샘플링 (20개 점으로 증가하여 부드러운 이동)
+          const sampleCount = 20;
+          for (let j = 0; j <= sampleCount; j++) {
+            const t = j / sampleCount;
             const px = p1.x + (p2.x - p1.x) * t;
             const py = p1.y + (p2.y - p1.y) * t;
             const dx = x - px;
@@ -1209,7 +1216,8 @@
           this.saveToStorage(); // 저장
           this.render();
         } else if (this.draggingKerbIndex >= 0 && this.mode === 'moveKerb') {
-          const point = this.getCanvasPoint(e);
+          // 연석 이동 시 부드러운 이동을 위해 반올림하지 않음
+          const point = this.getCanvasPoint(e, false);
           const currentKerb = this.curbs[this.draggingKerbIndex];
           // 트랙 경계를 따라 새로운 경로 생성
           const kerbLength = currentKerb.length || 300;
