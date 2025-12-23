@@ -14,73 +14,101 @@
     <!-- 로비 화면 -->
     <div id="lobby" class="screen active">
       <div class="lobby-container">
-        <h1 class="game-title">
-          <span class="title-icon">🏎️</span>
-          TURBO RACING
-        </h1>
-        
-        <div class="nickname-section">
-          <label for="nickname">닉네임</label>
-          <input type="text" id="nickname" placeholder="닉네임 입력..." maxlength="12">
-        </div>
-
-        <div class="track-select-section">
-          <h2>트랙 선택</h2>
-          <div class="track-selector">
-            <label for="trackSelect" class="track-label">트랙</label>
-            <div class="custom-dropdown" id="trackDropdown">
-              <div class="custom-dropdown-selected" id="trackDropdownSelected">
-                <span id="trackDropdownText">기본 서킷</span>
-                <svg class="dropdown-arrow" width="16" height="16" viewBox="0 0 16 16" fill="none">
-                  <path d="M8 11L3 6H13L8 11Z" fill="#00d4ff"/>
-                </svg>
-              </div>
-              <div class="custom-dropdown-options" id="trackDropdownOptions">
-                <!-- 옵션은 JavaScript에서 동적으로 추가 -->
-              </div>
-            </div>
-            <!-- 숨겨진 select 요소 (기존 호환성 유지) -->
-            <select id="trackSelect" class="track-select-hidden" style="display: none;">
-              <!-- 트랙 옵션은 JavaScript에서 동적으로 추가 -->
-            </select>
+        <div class="lobby-header">
+          <h1 class="game-title">
+            <span class="title-icon">🏎️</span>
+            TURBO RACING
+          </h1>
+          <div class="lobby-actions">
+            <button id="createRoomBtn" class="btn btn-primary">
+              <span class="btn-icon">➕</span>
+              새 게임 만들기
+            </button>
+            <button id="refreshRoomsBtn" class="btn btn-secondary">
+              <span class="btn-icon">🔄</span>
+              새로고침
+            </button>
+            <button id="openEditorBtn" class="btn btn-secondary" onclick="window.open('/track-editor.html', '_blank')">
+              <span class="btn-icon">🛠️</span>
+              트랙 편집기
+            </button>
           </div>
         </div>
 
-        <div class="car-customize-section">
-          <h2>차량 색상 선택</h2>
-          <div class="car-preview-container">
-            <div class="car-preview-canvas-wrapper">
-              <canvas id="carPreviewCanvas" width="300" height="225"></canvas>
+        <div class="lobby-content">
+          <div class="lobby-settings">
+            <div class="settings-card">
+              <div class="card-header">
+                <span class="card-icon">👤</span>
+                <h2>플레이어 설정</h2>
+              </div>
+              <div class="nickname-section">
+                <label for="nickname">닉네임</label>
+                <input type="text" id="nickname" placeholder="닉네임 입력..." maxlength="12">
+              </div>
             </div>
-            <div class="color-selector">
-              <label for="carColorPicker" class="color-label">색상</label>
-              <div class="color-picker-wrapper">
-                <input type="color" id="carColorPicker" value="#2d6ce8" class="color-picker-input">
-                <span id="colorValueText" class="color-value-text">#2d6ce8</span>
+
+            <div class="settings-card">
+              <div class="card-header">
+                <span class="card-icon">🎨</span>
+                <h2>차량 커스터마이징</h2>
+              </div>
+              <div class="car-preview-container">
+                <div class="car-preview-canvas-wrapper">
+                  <canvas id="carPreviewCanvas" width="300" height="225"></canvas>
+                </div>
+                <div class="color-selector">
+                  <label for="carColorPicker" class="color-label">색상 선택</label>
+                  <div class="color-picker-wrapper">
+                    <input type="color" id="carColorPicker" value="#2d6ce8" class="color-picker-input">
+                    <span id="colorValueText" class="color-value-text">#2d6ce8</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="settings-card">
+              <div class="card-header">
+                <span class="card-icon">🏁</span>
+                <h2>트랙 선택</h2>
+              </div>
+              <div class="track-selector">
+                <div class="custom-dropdown" id="trackDropdown">
+                  <div class="custom-dropdown-selected" id="trackDropdownSelected">
+                    <span id="trackDropdownText">기본 서킷</span>
+                    <svg class="dropdown-arrow" width="16" height="16" viewBox="0 0 16 16" fill="none">
+                      <path d="M8 11L3 6H13L8 11Z" fill="#00d4ff"/>
+                    </svg>
+                  </div>
+                  <div class="custom-dropdown-options" id="trackDropdownOptions">
+                    <!-- 옵션은 JavaScript에서 동적으로 추가 -->
+                  </div>
+                </div>
+                <!-- 숨겨진 select 요소 (기존 호환성 유지) -->
+                <select id="trackSelect" class="track-select-hidden" style="display: none;">
+                  <!-- 트랙 옵션은 JavaScript에서 동적으로 추가 -->
+                </select>
               </div>
             </div>
           </div>
-        </div>
 
-        <div class="lobby-actions">
-          <button id="createRoomBtn" class="btn btn-primary">
-            <span class="btn-icon">➕</span>
-            새 게임 만들기
-          </button>
-          <button id="refreshRoomsBtn" class="btn btn-secondary">
-            <span class="btn-icon">🔄</span>
-            새로고침
-          </button>
-          <button id="openEditorBtn" class="btn btn-secondary" onclick="window.open('/track-editor.html', '_blank')">
-            <span class="btn-icon">🛠️</span>
-            트랙 편집기
-          </button>
-        </div>
-
-        <div class="room-list-section">
-          <h2>게임 목록</h2>
-          <div id="roomList" class="room-list">
-            <div class="no-rooms">현재 열린 게임이 없습니다</div>
+          <div class="lobby-rooms">
+            <div class="room-list-card">
+              <div class="card-header">
+                <span class="card-icon">🎮</span>
+                <h2>게임 목록</h2>
+                <button id="refreshRoomsBtn2" class="refresh-btn" title="새로고침">
+                  <span>🔄</span>
+                </button>
+              </div>
+              <div id="roomList" class="room-list">
+                <div class="no-rooms">
+                  <div class="no-rooms-icon">🎯</div>
+                  <p>현재 열린 게임이 없습니다</p>
+                  <p class="no-rooms-hint">새 게임을 만들어보세요!</p>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -89,25 +117,36 @@
     <!-- 방 대기실 -->
     <div id="waitingRoom" class="screen">
       <div class="waiting-container">
-        <div class="room-header">
-          <h2 id="roomTitle">게임 대기실</h2>
-          <span id="roomId" class="room-code"></span>
+        <div class="waiting-header">
+          <div class="room-info">
+            <h2 id="roomTitle">게임 대기실</h2>
+            <div class="room-code-wrapper">
+              <span class="room-code-label">방 코드</span>
+              <span id="roomId" class="room-code"></span>
+            </div>
+          </div>
         </div>
 
-        <div class="players-grid">
-          <h3>참가자</h3>
-          <div id="playersList" class="players-list"></div>
-        </div>
+        <div class="waiting-content">
+          <div class="players-section">
+            <div class="section-header">
+              <span class="section-icon">👥</span>
+              <h3>참가자</h3>
+              <span id="playerCount" class="player-count">0/8</span>
+            </div>
+            <div id="playersList" class="players-list"></div>
+          </div>
 
-        <div class="waiting-actions">
-          <button id="startGameBtn" class="btn btn-primary btn-large" disabled>
-            <span class="btn-icon">🏁</span>
-            게임 시작
-          </button>
-          <button id="leaveRoomBtn" class="btn btn-danger">
-            <span class="btn-icon">🚪</span>
-            나가기
-          </button>
+          <div class="waiting-actions">
+            <button id="startGameBtn" class="btn btn-primary btn-large" disabled>
+              <span class="btn-icon">🏁</span>
+              게임 시작
+            </button>
+            <button id="leaveRoomBtn" class="btn btn-danger btn-large">
+              <span class="btn-icon">🚪</span>
+              나가기
+            </button>
+          </div>
         </div>
       </div>
     </div>

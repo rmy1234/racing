@@ -205,6 +205,12 @@ class Game {
         trackDropdownText.textContent = track.name;
         trackDropdown.classList.remove('open');
         
+        // 부모 카드에서도 클래스 제거
+        const settingsCard = trackDropdown.closest('.settings-card');
+        if (settingsCard) {
+          settingsCard.classList.remove('dropdown-open');
+        }
+        
         // 선택된 옵션 표시 업데이트
         trackDropdownOptions.querySelectorAll('.custom-dropdown-option').forEach(opt => {
           opt.classList.remove('selected');
@@ -237,13 +243,29 @@ class Game {
     // 드롭다운 열기/닫기
     trackDropdownSelected.addEventListener('click', (e) => {
       e.stopPropagation();
+      const isOpen = trackDropdown.classList.contains('open');
       trackDropdown.classList.toggle('open');
+      
+      // 드롭다운이 열려있을 때 부모 카드에 클래스 추가/제거
+      const settingsCard = trackDropdown.closest('.settings-card');
+      if (settingsCard) {
+        if (!isOpen) {
+          settingsCard.classList.add('dropdown-open');
+        } else {
+          settingsCard.classList.remove('dropdown-open');
+        }
+      }
     });
 
     // 외부 클릭 시 닫기
     document.addEventListener('click', (e) => {
       if (!trackDropdown.contains(e.target)) {
         trackDropdown.classList.remove('open');
+        // 부모 카드에서도 클래스 제거
+        const settingsCard = trackDropdown.closest('.settings-card');
+        if (settingsCard) {
+          settingsCard.classList.remove('dropdown-open');
+        }
       }
     });
 
@@ -251,7 +273,18 @@ class Game {
     trackDropdownSelected.addEventListener('keydown', (e) => {
       if (e.key === 'Enter' || e.key === ' ') {
         e.preventDefault();
+        const isOpen = trackDropdown.classList.contains('open');
         trackDropdown.classList.toggle('open');
+        
+        // 드롭다운이 열려있을 때 부모 카드에 클래스 추가/제거
+        const settingsCard = trackDropdown.closest('.settings-card');
+        if (settingsCard) {
+          if (!isOpen) {
+            settingsCard.classList.add('dropdown-open');
+          } else {
+            settingsCard.classList.remove('dropdown-open');
+          }
+        }
       }
     });
   }
@@ -362,9 +395,20 @@ class Game {
     });
     
     // 새로고침 버튼
-    document.getElementById('refreshRoomsBtn').addEventListener('click', () => {
+    const refreshRoomsBtn = document.getElementById('refreshRoomsBtn');
+    const refreshRoomsBtn2 = document.getElementById('refreshRoomsBtn2');
+    
+    const refreshRooms = () => {
       this.network.getRooms();
-    });
+    };
+    
+    if (refreshRoomsBtn) {
+      refreshRoomsBtn.addEventListener('click', refreshRooms);
+    }
+    
+    if (refreshRoomsBtn2) {
+      refreshRoomsBtn2.addEventListener('click', refreshRooms);
+    }
     
     // 게임 시작 버튼
     document.getElementById('startGameBtn').addEventListener('click', () => {
@@ -563,9 +607,18 @@ class Game {
   
   updateWaitingRoom(room) {
     document.getElementById('roomTitle').textContent = room.name;
-    document.getElementById('roomId').textContent = `코드: ${room.id}`;
+    document.getElementById('roomId').textContent = room.id;
     
     const playersList = document.getElementById('playersList');
+    const playerCount = room.players ? room.players.length : 0;
+    const maxPlayers = room.maxPlayers || 8;
+    
+    // 플레이어 수 업데이트
+    const playerCountElement = document.getElementById('playerCount');
+    if (playerCountElement) {
+      playerCountElement.textContent = `${playerCount}/${maxPlayers}`;
+    }
+    
     playersList.innerHTML = room.players.map(player => `
       <div class="player-card ${player.id === room.host ? 'host' : ''}">
         <div class="player-avatar">🏎️</div>
