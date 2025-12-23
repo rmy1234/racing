@@ -4,264 +4,31 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>트랙 편집기 - 개발용</title>
-  <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
-
-    body {
-      font-family: 'Courier New', monospace;
-      background: #1a1a1a;
-      color: #fff;
-      overflow: hidden;
-      display: flex;
-      flex-direction: column;
-      height: 100vh;
-    }
-
-    .header {
-      background: #2a2a2a;
-      padding: 10px 20px;
-      border-bottom: 2px solid #444;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-
-    .header h1 {
-      font-size: 18px;
-      color: #00ff88;
-    }
-
-    .controls {
-      display: flex;
-      gap: 10px;
-    }
-
-    button {
-      padding: 8px 16px;
-      background: #333;
-      color: #fff;
-      border: 1px solid #555;
-      border-radius: 4px;
-      cursor: pointer;
-      font-size: 12px;
-    }
-
-    button:hover {
-      background: #444;
-    }
-
-    button.active {
-      background: #00ff88;
-      color: #000;
-    }
-
-    button.danger {
-      background: #ff3366;
-    }
-
-    .main-container {
-      display: flex;
-      flex: 1;
-      overflow: hidden;
-    }
-
-    .canvas-container {
-      flex: 1;
-      position: relative;
-      background: #0a0a0a;
-      overflow: hidden;
-    }
-    
-    .minimap {
-      position: absolute;
-      top: 10px;
-      right: 10px;
-      width: 200px;
-      height: 150px;
-      background: rgba(42, 42, 42, 0.9);
-      border: 2px solid #555;
-      border-radius: 4px;
-      z-index: 100;
-      cursor: crosshair;
-    }
-    
-    #minimapCanvas {
-      width: 100%;
-      height: 100%;
-      display: block;
-    }
-    
-    .zoom-controls {
-      position: absolute;
-      bottom: 10px;
-      right: 10px;
-      display: flex;
-      flex-direction: column;
-      gap: 5px;
-      z-index: 100;
-    }
-    
-    .zoom-controls button {
-      width: 40px;
-      height: 40px;
-      padding: 0;
-      font-size: 18px;
-      background: rgba(42, 42, 42, 0.9);
-      border: 1px solid #555;
-    }
-
-    #editorCanvas {
-      display: block;
-      cursor: crosshair;
-      width: 100%;
-      height: 100%;
-      image-rendering: pixelated;
-    }
-
-    .sidebar {
-      width: 350px;
-      background: #2a2a2a;
-      border-left: 2px solid #444;
-      overflow-y: auto;
-      padding: 20px;
-    }
-
-    .section {
-      margin-bottom: 20px;
-      padding: 15px;
-      background: #333;
-      border-radius: 6px;
-    }
-
-    .section h3 {
-      font-size: 14px;
-      margin-bottom: 10px;
-      color: #00ff88;
-      border-bottom: 1px solid #555;
-      padding-bottom: 5px;
-    }
-
-    .input-group {
-      margin-bottom: 10px;
-    }
-
-    .input-group label {
-      display: block;
-      font-size: 11px;
-      color: #aaa;
-      margin-bottom: 4px;
-    }
-
-    .input-group input {
-      width: 100%;
-      padding: 6px;
-      background: #1a1a1a;
-      color: #fff;
-      border: 1px solid #555;
-      border-radius: 4px;
-      font-size: 12px;
-    }
-
-    .point-list {
-      max-height: 200px;
-      overflow-y: auto;
-      margin-top: 10px;
-    }
-
-    .point-item {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 6px;
-      background: #1a1a1a;
-      margin-bottom: 4px;
-      border-radius: 4px;
-      font-size: 11px;
-    }
-
-    .point-item:hover {
-      background: #2a2a2a;
-    }
-
-    .point-item.selected {
-      background: #00ff8833;
-      border: 1px solid #00ff88;
-    }
-
-    .point-coords {
-      color: #aaa;
-      font-family: monospace;
-    }
-
-    .point-actions {
-      display: flex;
-      gap: 4px;
-    }
-
-    .point-actions button {
-      padding: 2px 6px;
-      font-size: 10px;
-    }
-
-    .code-output {
-      width: 100%;
-      height: 300px;
-      padding: 10px;
-      background: #1a1a1a;
-      color: #00ff88;
-      border: 1px solid #555;
-      border-radius: 4px;
-      font-family: 'Courier New', monospace;
-      font-size: 11px;
-      resize: vertical;
-    }
-
-    .info {
-      font-size: 11px;
-      color: #aaa;
-      margin-top: 10px;
-      padding: 10px;
-      background: #1a1a1a;
-      border-radius: 4px;
-      line-height: 1.6;
-    }
-
-    .toolbar {
-      position: absolute;
-      top: 10px;
-      left: 10px;
-      background: rgba(42, 42, 42, 0.9);
-      padding: 10px;
-      border-radius: 6px;
-      display: flex;
-      gap: 8px;
-      z-index: 100;
-    }
-
-    .toolbar button {
-      padding: 6px 12px;
-      font-size: 11px;
-    }
-
-    .status {
-      position: absolute;
-      bottom: 10px;
-      left: 10px;
-      background: rgba(42, 42, 42, 0.9);
-      padding: 8px 12px;
-      border-radius: 4px;
-      font-size: 11px;
-      color: #aaa;
-    }
-  </style>
+  <link rel="stylesheet" href="/css/track-editor.css">
   <!-- 트랙 파일 미리 로드 -->
   <script src="/js/track.js"></script>
   <script src="/js/tracks/basic-circuit.js"></script>
   <script src="/js/tracks/monza.js"></script>
+  <!-- TrackEditor 유틸리티 함수 -->
+  <script src="/js/track-editor/utils.js"></script>
+  <!-- TrackEditor 렌더링 함수 -->
+  <script src="/js/track-editor/renderer.js"></script>
+  <!-- TrackEditor 포인트 관리 함수 -->
+  <script src="/js/track-editor/point-manager.js"></script>
+  <!-- TrackEditor 체크포인트 관리 함수 -->
+  <script src="/js/track-editor/checkpoint-manager.js"></script>
+  <!-- TrackEditor 연석 관리 함수 -->
+  <script src="/js/track-editor/kerb-manager.js"></script>
+  <!-- TrackEditor 출발 위치 관리 함수 -->
+  <script src="/js/track-editor/spawn-manager.js"></script>
+  <!-- TrackEditor 코드 생성 함수 -->
+  <script src="/js/track-editor/code-generator.js"></script>
+  <!-- TrackEditor 트랙 관리 함수 -->
+  <script src="/js/track-editor/track-manager.js"></script>
+  <!-- TrackEditor 이벤트 핸들러 함수 -->
+  <script src="/js/track-editor/event-handler.js"></script>
+  <!-- TrackEditor UI 관리 함수 -->
+  <script src="/js/track-editor/ui-manager.js"></script>
 </head>
 <body>
     <div class="header">
@@ -287,6 +54,12 @@
         <button id="addKerbBtn">🟦 연석 추가</button>
         <button id="moveKerbBtn">↔️ 연석 이동</button>
         <button id="deleteKerbBtn">✖️ 연석 삭제</button>
+        <button id="addSpawnBtn">🚗 출발 위치 추가</button>
+        <button id="moveSpawnBtn">↔️ 출발 위치 이동</button>
+        <button id="deleteSpawnBtn">✖️ 출발 위치 삭제</button>
+        <button id="setStartLineBtn">🏁 시작선 설정</button>
+        <button id="moveStartLineBtn">↔️ 시작선 이동</button>
+        <button id="deleteStartLineBtn">✖️ 시작선 삭제</button>
         <button id="previewBtn">👁️ 미리보기</button>
       </div>
       <canvas id="editorCanvas" width="1200" height="800"></canvas>
@@ -390,6 +163,62 @@
       </div>
 
       <div class="section">
+        <h3>출발 위치 목록</h3>
+        <div class="point-list" id="spawnList">
+          <div style="color: #666; font-size: 11px; text-align: center; padding: 20px;">
+            출발 위치를 추가하려면 출발 위치 추가 모드를 선택하세요
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h3>선택된 출발 위치</h3>
+        <div id="selectedSpawnInfo" style="color: #666; font-size: 11px;">
+          출발 위치를 선택하세요
+        </div>
+        <div class="input-group" id="spawnEditGroup" style="display: none; margin-top: 10px;">
+          <label>X 좌표</label>
+          <input type="number" id="spawnX" step="1">
+        </div>
+        <div class="input-group" id="spawnEditGroup2" style="display: none;">
+          <label>Y 좌표</label>
+          <input type="number" id="spawnY" step="1">
+        </div>
+      </div>
+
+      <div class="section">
+        <h3>출발 방향 설정</h3>
+        <div class="input-group">
+          <label>출발 방향 (라디안)</label>
+          <input type="number" id="spawnAngle" step="0.1" value="0">
+        </div>
+        <div class="input-group" style="margin-top: 5px;">
+          <label>출발 방향 (도)</label>
+          <input type="number" id="spawnAngleDeg" step="1" min="0" max="360" value="0">
+        </div>
+      </div>
+
+      <div class="section">
+        <h3>시작선 설정</h3>
+        <div class="input-group">
+          <label>X 좌표</label>
+          <input type="number" id="startLineX" step="1">
+        </div>
+        <div class="input-group">
+          <label>Y 좌표</label>
+          <input type="number" id="startLineY" step="1">
+        </div>
+        <div class="input-group">
+          <label>각도 (라디안)</label>
+          <input type="number" id="startLineAngle" step="0.1" value="0">
+        </div>
+        <div class="input-group" style="margin-top: 5px;">
+          <label>각도 (도)</label>
+          <input type="number" id="startLineAngleDeg" step="1" min="0" max="360" value="0">
+        </div>
+      </div>
+
+      <div class="section">
         <h3>생성된 코드</h3>
         <button id="copyCodeBtn" style="width: 100%; margin-bottom: 10px;">코드 복사</button>
         <textarea id="codeOutput" class="code-output" readonly></textarea>
@@ -415,16 +244,24 @@
         this.points = [];
         this.checkpoints = []; // 체크포인트 배열
         this.curbs = []; // 연석 배열 { x, y, angle, length }
+        this.spawnPositions = []; // 출발 위치 배열 { x, y }
+        this.spawnAngle = 0; // 출발 방향 (라디안)
+        this.startLine = { x: 0, y: 0, angle: 0 }; // 시작선 { x, y, angle }
         this.selectedPointIndex = -1;
         this.selectedCheckpointIndex = -1; // 선택된 체크포인트 인덱스
         this.selectedKerbIndex = -1; // 선택된 연석 인덱스
+        this.selectedSpawnIndex = -1; // 선택된 출발 위치 인덱스
         this.draggingPointIndex = -1;
         this.draggingCheckpointIndex = -1; // 드래그 중인 체크포인트 인덱스
         this.draggingKerbIndex = -1; // 드래그 중인 연석 인덱스
+        this.draggingSpawnIndex = -1; // 드래그 중인 출발 위치 인덱스
+        this.draggingStartLine = false; // 드래그 중인 시작선
         this.hoveredPointIndex = -1; // 호버 중인 포인트 인덱스
         this.hoveredCheckpointIndex = -1; // 호버 중인 체크포인트 인덱스
         this.hoveredKerbIndex = -1; // 호버 중인 연석 인덱스
-        this.mode = 'add'; // 'add', 'move', 'delete', 'addCheckpoint', 'moveCheckpoint', 'deleteCheckpoint', 'addKerb', 'moveKerb', 'deleteKerb'
+        this.hoveredSpawnIndex = -1; // 호버 중인 출발 위치 인덱스
+        this.hoveredStartLine = false; // 호버 중인 시작선
+        this.mode = 'add'; // 'add', 'move', 'delete', 'addCheckpoint', 'moveCheckpoint', 'deleteCheckpoint', 'addKerb', 'moveKerb', 'deleteKerb', 'addSpawn', 'moveSpawn', 'deleteSpawn', 'setStartLine', 'moveStartLine', 'deleteStartLine'
         this.zoom = 1;
         this.offsetX = 0;
         this.offsetY = 0;
@@ -445,6 +282,11 @@
         // 렌더링 최적화를 위한 변수
         this.animationFrameId = null;
         this.pendingRender = false;
+        
+        // 연석 이동 성능 최적화를 위한 캐시
+        this._smoothPathCache = null;
+        this._trackBoundsCache = null;
+        this._pointsHash = null; // 포인트 배열 해시 (캐시 무효화용)
 
         // 캔버스 크기 조정
         this.resizeCanvas();
@@ -454,6 +296,13 @@
         this.loadFromStorage();
         
         this.setupEventListeners();
+        
+        // 모드 복원 (버튼이 생성된 후에 실행)
+        const savedMode = localStorage.getItem('trackEditor_mode');
+        if (savedMode) {
+          this.setMode(savedMode);
+        }
+        
         this.updateCodeOutput();
         
         // 초기 렌더링은 약간 지연하여 DOM이 완전히 로드된 후 수행
@@ -462,20 +311,19 @@
           // 캔버스 크기 재확인
           this.resizeCanvas();
           
-          if (this.points.length > 0) {
-            // 저장된 데이터가 있으면 그 뷰 사용, 없으면 리셋
-            const savedZoom = localStorage.getItem('trackEditor_zoom');
-            const savedOffsetX = localStorage.getItem('trackEditor_offsetX');
-            const savedOffsetY = localStorage.getItem('trackEditor_offsetY');
-            if (savedZoom && savedOffsetX && savedOffsetY) {
-              this.zoom = parseFloat(savedZoom);
-              this.offsetX = parseFloat(savedOffsetX);
-              this.offsetY = parseFloat(savedOffsetY);
-            } else {
-              this.resetView();
-            }
+          // 저장된 줌 상태가 있으면 복원, 없으면 resetView 호출
+          // (loadFromStorage에서 이미 복원되었을 수 있지만, 캔버스 크기가 준비된 후 다시 확인)
+          const savedZoom = localStorage.getItem('trackEditor_zoom');
+          const savedOffsetX = localStorage.getItem('trackEditor_offsetX');
+          const savedOffsetY = localStorage.getItem('trackEditor_offsetY');
+          if (savedZoom && savedOffsetX !== null && savedOffsetY !== null) {
+            // 저장된 카메라 위치와 줌 복원
+            this.zoom = parseFloat(savedZoom);
+            this.offsetX = parseFloat(savedOffsetX);
+            this.offsetY = parseFloat(savedOffsetY);
           } else {
-            this.resetView();
+            // 저장된 상태가 없으면 초기 뷰로 리셋 (초기 로드 시에는 저장하지 않음)
+            this.resetView(true);
           }
           
           // 즉시 렌더링
@@ -483,7 +331,24 @@
           
           // 추가로 한 번 더 렌더링 (캔버스가 완전히 준비된 후)
           setTimeout(() => {
+            // 캔버스 크기가 변경되었을 수 있으므로 재확인
+            const prevCanvasWidth = this.canvas.width;
+            const prevCanvasHeight = this.canvas.height;
             this.resizeCanvas();
+            
+            // 캔버스 크기가 변경된 경우 저장된 오프셋 값 조정
+            if (prevCanvasWidth !== this.canvas.width || prevCanvasHeight !== this.canvas.height) {
+              const savedZoom2 = localStorage.getItem('trackEditor_zoom');
+              const savedOffsetX2 = localStorage.getItem('trackEditor_offsetX');
+              const savedOffsetY2 = localStorage.getItem('trackEditor_offsetY');
+              if (savedZoom2 && savedOffsetX2 && savedOffsetY2) {
+                // 저장된 값을 다시 복원 (캔버스 크기 변경 후)
+                this.zoom = parseFloat(savedZoom2);
+                this.offsetX = parseFloat(savedOffsetX2);
+                this.offsetY = parseFloat(savedOffsetY2);
+              }
+            }
+            
             this.render();
           }, 50);
         });
@@ -491,87 +356,12 @@
       
       // localStorage에 저장
       saveToStorage() {
-        try {
-          localStorage.setItem('trackEditor_points', JSON.stringify(this.points));
-          localStorage.setItem('trackEditor_checkpoints', JSON.stringify(this.checkpoints));
-          localStorage.setItem('trackEditor_curbs', JSON.stringify(this.curbs));
-          localStorage.setItem('trackEditor_trackName', document.getElementById('trackName').value);
-          localStorage.setItem('trackEditor_trackId', document.getElementById('trackId').value);
-          localStorage.setItem('trackEditor_mapWidth', document.getElementById('mapWidth').value);
-          localStorage.setItem('trackEditor_mapHeight', document.getElementById('mapHeight').value);
-          localStorage.setItem('trackEditor_selectedPointIndex', this.selectedPointIndex.toString());
-          localStorage.setItem('trackEditor_selectedCheckpointIndex', this.selectedCheckpointIndex.toString());
-          localStorage.setItem('trackEditor_selectedKerbIndex', this.selectedKerbIndex.toString());
-          localStorage.setItem('trackEditor_zoom', this.zoom.toString());
-          localStorage.setItem('trackEditor_offsetX', this.offsetX.toString());
-          localStorage.setItem('trackEditor_offsetY', this.offsetY.toString());
-          localStorage.setItem('trackEditor_previewMode', this.previewMode.toString());
-        } catch (e) {
-          console.warn('저장 실패:', e);
-        }
+        window.TrackEditorTrackManager.saveToStorage(this);
       }
       
       // localStorage에서 복원
       loadFromStorage() {
-        try {
-          const savedPoints = localStorage.getItem('trackEditor_points');
-          if (savedPoints) {
-            this.points = JSON.parse(savedPoints);
-          }
-          
-          const savedCheckpoints = localStorage.getItem('trackEditor_checkpoints');
-          if (savedCheckpoints) {
-            this.checkpoints = JSON.parse(savedCheckpoints);
-          }
-          
-          const savedCurbs = localStorage.getItem('trackEditor_curbs');
-          if (savedCurbs) {
-            this.curbs = JSON.parse(savedCurbs);
-          }
-          
-          const trackName = localStorage.getItem('trackEditor_trackName');
-          const trackId = localStorage.getItem('trackEditor_trackId');
-          const mapWidth = localStorage.getItem('trackEditor_mapWidth');
-          const mapHeight = localStorage.getItem('trackEditor_mapHeight');
-          const selectedIndex = localStorage.getItem('trackEditor_selectedPointIndex');
-          const selectedCheckpointIndex = localStorage.getItem('trackEditor_selectedCheckpointIndex');
-          const selectedKerbIndex = localStorage.getItem('trackEditor_selectedKerbIndex');
-          
-          if (trackName) document.getElementById('trackName').value = trackName;
-          if (trackId) document.getElementById('trackId').value = trackId;
-          if (mapWidth) document.getElementById('mapWidth').value = mapWidth;
-          if (mapHeight) document.getElementById('mapHeight').value = mapHeight;
-          if (selectedIndex) this.selectedPointIndex = parseInt(selectedIndex, 10);
-          if (selectedCheckpointIndex) this.selectedCheckpointIndex = parseInt(selectedCheckpointIndex, 10);
-          if (selectedKerbIndex) this.selectedKerbIndex = parseInt(selectedKerbIndex, 10);
-          
-          // 미리보기 모드 복원
-          const savedPreviewMode = localStorage.getItem('trackEditor_previewMode');
-          if (savedPreviewMode === 'true') {
-            this.previewMode = true;
-            document.getElementById('previewBtn').classList.add('active');
-          }
-          
-          if (this.points.length > 0) {
-            this.updatePointList();
-            this.updateSelectedPointInfo();
-          }
-          if (this.checkpoints.length > 0) {
-            this.updateCheckpointList();
-            this.updateSelectedCheckpointInfo();
-          }
-          if (this.curbs.length > 0) {
-            this.updateKerbList();
-            this.updateSelectedKerbInfo();
-          }
-          
-          if (this.checkpoints.length > 0) {
-            this.updateCheckpointList();
-            this.updateSelectedCheckpointInfo();
-          }
-        } catch (e) {
-          console.warn('복원 실패:', e);
-        }
+        window.TrackEditorTrackManager.loadFromStorage(this);
       }
 
       resizeCanvas() {
@@ -588,447 +378,84 @@
       }
 
       setupEventListeners() {
-        // 모드 버튼
-        document.getElementById('addModeBtn').addEventListener('click', () => this.setMode('add'));
-        document.getElementById('moveModeBtn').addEventListener('click', () => this.setMode('move'));
-        document.getElementById('deleteModeBtn').addEventListener('click', () => this.setMode('delete'));
-        document.getElementById('addCheckpointBtn').addEventListener('click', () => this.setMode('addCheckpoint'));
-        document.getElementById('moveCheckpointBtn').addEventListener('click', () => this.setMode('moveCheckpoint'));
-        document.getElementById('deleteCheckpointBtn').addEventListener('click', () => this.setMode('deleteCheckpoint'));
-        document.getElementById('addKerbBtn').addEventListener('click', () => this.setMode('addKerb'));
-        document.getElementById('moveKerbBtn').addEventListener('click', () => this.setMode('moveKerb'));
-        document.getElementById('deleteKerbBtn').addEventListener('click', () => this.setMode('deleteKerb'));
-        document.getElementById('previewBtn').addEventListener('click', () => this.togglePreview());
-
-        // 캔버스 이벤트
-        this.canvas.addEventListener('click', (e) => this.handleCanvasClick(e));
-        this.canvas.addEventListener('mousedown', (e) => this.handleMouseDown(e));
-        this.canvas.addEventListener('mousemove', (e) => this.handleMouseMove(e));
-        this.canvas.addEventListener('mouseup', (e) => this.handleMouseUp(e));
-        this.canvas.addEventListener('wheel', (e) => this.handleWheel(e));
-        this.canvas.addEventListener('contextmenu', (e) => e.preventDefault()); // 우클릭 메뉴 방지
-        this.canvas.addEventListener('mouseleave', (e) => {
-          // 캔버스를 벗어날 때 호버 상태 초기화
-          this.hoveredPointIndex = -1;
-          this.hoveredCheckpointIndex = -1;
-          this.hoveredKerbIndex = -1;
-          if (this.mode === 'delete' || this.mode === 'deleteCheckpoint' || this.mode === 'deleteKerb') {
-            this.canvas.style.cursor = 'not-allowed';
-          }
-          this.render();
-        });
-        
-        // 미니맵 이벤트
-        if (this.minimapCanvas) {
-          this.minimapCanvas.addEventListener('mousedown', (e) => this.handleMinimapMouseDown(e));
-          this.minimapCanvas.addEventListener('mousemove', (e) => this.handleMinimapMouseMove(e));
-          this.minimapCanvas.addEventListener('mouseup', (e) => this.handleMinimapMouseUp(e));
-          this.minimapCanvas.addEventListener('mouseleave', (e) => this.handleMinimapMouseUp(e));
-        }
-        
-        // 줌 컨트롤 버튼
-        document.getElementById('zoomInBtn').addEventListener('click', () => this.zoomIn());
-        document.getElementById('zoomOutBtn').addEventListener('click', () => this.zoomOut());
-        document.getElementById('resetViewBtn').addEventListener('click', () => this.resetView());
-
-        // 입력 필드 변경
-        document.getElementById('trackName').addEventListener('input', () => { this.updateCodeOutput(); this.saveToStorage(); });
-        document.getElementById('trackId').addEventListener('input', () => { this.updateCodeOutput(); this.saveToStorage(); });
-        document.getElementById('mapWidth').addEventListener('input', () => { this.render(); this.updateCodeOutput(); this.saveToStorage(); });
-        document.getElementById('mapHeight').addEventListener('input', () => { this.render(); this.updateCodeOutput(); this.saveToStorage(); });
-        document.getElementById('pointX').addEventListener('input', () => this.updateSelectedPoint());
-        document.getElementById('pointY').addEventListener('input', () => this.updateSelectedPoint());
-        
-        // 포인트 타입 변경 버튼
-        document.getElementById('setStraightBtn').addEventListener('click', () => this.setPointType('straight'));
-        document.getElementById('setCurveBtn').addEventListener('click', () => this.setPointType('curve'));
-        
-        // 체크포인트 입력 필드 (요소가 존재하는 경우에만 이벤트 리스너 추가)
-        const checkpointX = document.getElementById('checkpointX');
-        const checkpointY = document.getElementById('checkpointY');
-        const checkpointAngle = document.getElementById('checkpointAngle');
-        const checkpointAngleDeg = document.getElementById('checkpointAngleDeg');
-        
-        if (checkpointX) {
-          checkpointX.addEventListener('input', () => this.updateSelectedCheckpoint());
-        }
-        if (checkpointY) {
-          checkpointY.addEventListener('input', () => this.updateSelectedCheckpoint());
-        }
-        if (checkpointAngle) {
-          checkpointAngle.addEventListener('input', () => {
-            const angle = parseFloat(checkpointAngle.value);
-            if (!isNaN(angle) && checkpointAngleDeg) {
-              checkpointAngleDeg.value = Math.round(angle * 180 / Math.PI);
-              this.updateSelectedCheckpoint();
-            }
-          });
-        }
-        if (checkpointAngleDeg) {
-          checkpointAngleDeg.addEventListener('input', () => {
-            const angleDeg = parseFloat(checkpointAngleDeg.value);
-            if (!isNaN(angleDeg) && checkpointAngle) {
-              checkpointAngle.value = (angleDeg * Math.PI / 180).toFixed(3);
-              this.updateSelectedCheckpoint();
-            }
-          });
-        }
-        
-        // 연석 입력 필드
-        const kerbX = document.getElementById('kerbX');
-        const kerbY = document.getElementById('kerbY');
-        const kerbAngle = document.getElementById('kerbAngle');
-        const kerbAngleDeg = document.getElementById('kerbAngleDeg');
-        const kerbLength = document.getElementById('kerbLength');
-        
-        if (kerbX) {
-          kerbX.addEventListener('input', () => this.updateSelectedKerb());
-        }
-        if (kerbY) {
-          kerbY.addEventListener('input', () => this.updateSelectedKerb());
-        }
-        if (kerbAngle) {
-          kerbAngle.addEventListener('input', () => {
-            const angle = parseFloat(kerbAngle.value);
-            if (!isNaN(angle) && kerbAngleDeg) {
-              kerbAngleDeg.value = Math.round(angle * 180 / Math.PI);
-              this.updateSelectedKerb();
-            }
-          });
-        }
-        if (kerbAngleDeg) {
-          kerbAngleDeg.addEventListener('input', () => {
-            const angleDeg = parseFloat(kerbAngleDeg.value);
-            if (!isNaN(angleDeg) && kerbAngle) {
-              kerbAngle.value = (angleDeg * Math.PI / 180).toFixed(3);
-              this.updateSelectedKerb();
-            }
-          });
-        }
-        if (kerbLength) {
-          kerbLength.addEventListener('input', () => this.updateSelectedKerb());
-        }
-
-        // 버튼
-        document.getElementById('newTrackBtn').addEventListener('click', () => this.newTrack());
-        document.getElementById('copyCodeBtn').addEventListener('click', () => this.copyCode());
-        document.getElementById('saveTrackBtn').addEventListener('click', () => this.copyCode());
-        document.getElementById('clearBtn').addEventListener('click', () => this.clearTrack());
-        document.getElementById('loadTrackBtn').addEventListener('click', () => this.loadTrack());
-
-        // 키보드
-        document.addEventListener('keydown', (e) => {
-          if (e.key === 'Delete' || e.key === 'Backspace') {
-            if (this.selectedPointIndex >= 0) {
-              this.deletePoint(this.selectedPointIndex);
-            }
-          }
-          // 스페이스바로 팬 모드 활성화
-          if (e.key === ' ') {
-            e.preventDefault();
-            this.canvas.style.cursor = 'grabbing';
-          }
-        });
-        
-        document.addEventListener('keyup', (e) => {
-          if (e.key === ' ') {
-            this.canvas.style.cursor = this.mode === 'add' ? 'crosshair' : this.mode === 'move' ? 'move' : 'pointer';
-          }
-        });
+        window.TrackEditorEventHandler.setupEventListeners(this);
       }
 
       setMode(mode) {
-        this.mode = mode;
-        document.getElementById('addModeBtn').classList.toggle('active', mode === 'add');
-        document.getElementById('moveModeBtn').classList.toggle('active', mode === 'move');
-        document.getElementById('deleteModeBtn').classList.toggle('active', mode === 'delete');
-        document.getElementById('addCheckpointBtn').classList.toggle('active', mode === 'addCheckpoint');
-        document.getElementById('moveCheckpointBtn').classList.toggle('active', mode === 'moveCheckpoint');
-        document.getElementById('deleteCheckpointBtn').classList.toggle('active', mode === 'deleteCheckpoint');
-        document.getElementById('addKerbBtn').classList.toggle('active', mode === 'addKerb');
-        document.getElementById('moveKerbBtn').classList.toggle('active', mode === 'moveKerb');
-        document.getElementById('deleteKerbBtn').classList.toggle('active', mode === 'deleteKerb');
-        
-        // 커서 설정
-        if (mode === 'add' || mode === 'addCheckpoint' || mode === 'addKerb') {
-          this.canvas.style.cursor = 'crosshair';
-        } else if (mode === 'move' || mode === 'moveCheckpoint' || mode === 'moveKerb') {
-          this.canvas.style.cursor = 'move';
-        } else if (mode === 'delete' || mode === 'deleteCheckpoint' || mode === 'deleteKerb') {
-          this.canvas.style.cursor = 'not-allowed'; // 삭제 모드 기본 커서
-        } else {
-          this.canvas.style.cursor = 'pointer';
-        }
-        // 호버 상태 초기화
-        this.hoveredPointIndex = -1;
-        this.hoveredCheckpointIndex = -1;
-        this.hoveredKerbIndex = -1;
-        this.updateStatus();
-        this.render(); // 커서 변경을 위해 다시 렌더링
+        window.TrackEditorUIManager.setMode(this, mode);
       }
 
       togglePreview() {
-        this.previewMode = !this.previewMode;
-        document.getElementById('previewBtn').classList.toggle('active', this.previewMode);
-        // 미리보기 모드 상태 저장
-        localStorage.setItem('trackEditor_previewMode', this.previewMode.toString());
-        this.render();
+        window.TrackEditorUIManager.togglePreview(this);
       }
 
       // 캔버스 좌표를 월드 좌표로 변환
       canvasToWorld(canvasX, canvasY) {
-        const worldX = (canvasX - this.offsetX) / this.zoom;
-        const worldY = (canvasY - this.offsetY) / this.zoom;
-        return { x: worldX, y: worldY };
+        return window.TrackEditorUtils.canvasToWorld(canvasX, canvasY, this.offsetX, this.offsetY, this.zoom);
       }
       
       // 월드 좌표를 캔버스 좌표로 변환
       worldToCanvas(worldX, worldY) {
-        const canvasX = worldX * this.zoom + this.offsetX;
-        const canvasY = worldY * this.zoom + this.offsetY;
-        return { x: canvasX, y: canvasY };
+        return window.TrackEditorUtils.worldToCanvas(worldX, worldY, this.offsetX, this.offsetY, this.zoom);
       }
       
       getCanvasPoint(e, round = true) {
-        const rect = this.canvas.getBoundingClientRect();
-        const canvasX = e.clientX - rect.left;
-        const canvasY = e.clientY - rect.top;
-        
-        // 줌과 오프셋을 고려하여 월드 좌표로 변환
-        const world = this.canvasToWorld(canvasX, canvasY);
-        // 연석 이동 시 부드러운 이동을 위해 반올림 옵션 추가
-        if (round) {
-          return { x: Math.round(world.x), y: Math.round(world.y) };
-        } else {
-          return { x: world.x, y: world.y };
-        }
+        return window.TrackEditorUtils.getCanvasPoint(e, this.canvas, this.offsetX, this.offsetY, this.zoom, round);
       }
 
       findPointAt(x, y, radius = 10) {
-        for (let i = this.points.length - 1; i >= 0; i--) {
-          const p = this.points[i];
-          const dx = p.x - x;
-          const dy = p.y - y;
-          if (dx * dx + dy * dy < radius * radius) {
-            return i;
-          }
-        }
-        return -1;
+        return window.TrackEditorUtils.findPointAt(x, y, this.points, radius);
+      }
+      
+      // 트랙 중심선에 가장 가까운 점 찾기 (스냅용)
+      snapToTrackCenter(x, y) {
+        return window.TrackEditorUtils.snapToTrackCenter(x, y, this.points);
       }
       
       // 체크포인트 각도 계산 (가장 가까운 트랙 포인트의 방향)
       calculateCheckpointAngle(x, y) {
-        if (this.points.length < 2) return 0;
-        
-        // 가장 가까운 포인트 찾기
-        let minDist = Infinity;
-        let nearestIndex = 0;
-        for (let i = 0; i < this.points.length; i++) {
-          const p = this.points[i];
-          const dx = x - p.x;
-          const dy = y - p.y;
-          const dist = Math.sqrt(dx * dx + dy * dy);
-          if (dist < minDist) {
-            minDist = dist;
-            nearestIndex = i;
-          }
-        }
-        
-        // 다음 포인트 방향 계산
-        const p1 = this.points[nearestIndex];
-        const p2 = this.points[(nearestIndex + 1) % this.points.length];
-        const dx = p2.x - p1.x;
-        const dy = p2.y - p1.y;
-        return Math.atan2(dy, dx);
+        return window.TrackEditorUtils.calculateCheckpointAngle(x, y, this.points);
       }
       
       // 체크포인트 찾기
       findCheckpointAt(x, y, radius = 15) {
-        for (let i = this.checkpoints.length - 1; i >= 0; i--) {
-          const cp = this.checkpoints[i];
-          const dx = cp.x - x;
-          const dy = cp.y - y;
-          if (dx * dx + dy * dy < radius * radius) {
-            return i;
-          }
-        }
-        return -1;
+        return window.TrackEditorUtils.findCheckpointAt(x, y, this.checkpoints, radius);
       }
+      
+      // 출발 위치 찾기
+      findSpawnAt(x, y, radius = 15) {
+        return window.TrackEditorUtils.findSpawnAt(x, y, this.spawnPositions, radius);
+      }
+      
+    // 시작선 찾기 (트랙 전체를 가로지르는 시작선)
+    findStartLineAt(x, y, threshold = 30) {
+        const trackWidth = parseInt(document.getElementById('trackWidth')?.value || '120') || 120;
+        return window.TrackEditorUtils.findStartLineAt(x, y, this.startLine, trackWidth, threshold);
+    }
+
       
       // 연석 찾기
       // 연석 감지 - 경로 기반
       findKerbAt(x, y, threshold = 30) {
-        for (let i = this.curbs.length - 1; i >= 0; i--) {
-          const kerb = this.curbs[i];
-          
-          // 새로운 경로 기반 연석
-          if (kerb.centerPath && kerb.centerPath.length > 0) {
-            // 클릭 위치에서 연석 경로까지의 최소 거리 계산
-            let minDist = Infinity;
-            for (let j = 0; j < kerb.centerPath.length; j++) {
-              const p = kerb.centerPath[j];
-              const dx = p.x - x;
-              const dy = p.y - y;
-              const dist = Math.sqrt(dx * dx + dy * dy);
-              if (dist < minDist) {
-                minDist = dist;
-              }
-            }
-            // 연석의 폭을 고려한 감지 범위
-            const detectRange = (kerb.width || 20) / 2 + threshold;
-            if (minDist < detectRange) {
-              return i;
-            }
-          }
-          // 구형 포맷 (하위 호환성)
-          else if (kerb.x !== undefined && kerb.y !== undefined) {
-            const dx = kerb.x - x;
-            const dy = kerb.y - y;
-            if (dx * dx + dy * dy < threshold * threshold) {
-              return i;
-            }
-          }
-        }
-        return -1;
+        return window.TrackEditorUtils.findKerbAt(x, y, this.curbs, threshold);
       }
       
       // 가장 가까운 트랙 경계 찾기 (연석 배치용) - 개선된 버전
-      findNearestTrackBoundary(x, y, kerbLength = 300) {
-        if (this.points.length < 2) return null;
-        
+      findNearestTrackBoundary(x, y, kerbLength = 300, isDragging = false) {
         const trackWidth = parseInt(document.getElementById('trackWidth')?.value || '120') || 120;
-        const smoothPath = this.getSmoothPath(this.points, 200);
-        const { innerPath, outerPath } = this.getTrackBounds(smoothPath, trackWidth);
-        
-        let minDist = Infinity;
-        let nearestIndex = -1;
-        let isInnerPath = false;
-        let nearestT = 0; // 세그먼트 내 위치 (0~1)
-        
-        // 내부 경계 확인 - 각 세그먼트를 더 세밀하게 샘플링
-        for (let i = 0; i < innerPath.length - 1; i++) {
-          const p1 = innerPath[i];
-          const p2 = innerPath[i + 1];
-          
-          // 세그먼트를 더 세밀하게 샘플링 (20개 점으로 증가하여 부드러운 이동)
-          const sampleCount = 20;
-          for (let j = 0; j <= sampleCount; j++) {
-            const t = j / sampleCount;
-            const px = p1.x + (p2.x - p1.x) * t;
-            const py = p1.y + (p2.y - p1.y) * t;
-            const dx = x - px;
-            const dy = y - py;
-            const dist = Math.sqrt(dx * dx + dy * dy);
-            if (dist < minDist) {
-              minDist = dist;
-              nearestIndex = i;
-              nearestT = t;
-              isInnerPath = true;
-            }
-          }
-        }
-        
-        // 외부 경계 확인 - 각 세그먼트를 더 세밀하게 샘플링
-        for (let i = 0; i < outerPath.length - 1; i++) {
-          const p1 = outerPath[i];
-          const p2 = outerPath[i + 1];
-          
-          // 세그먼트를 더 세밀하게 샘플링 (20개 점으로 증가하여 부드러운 이동)
-          const sampleCount = 20;
-          for (let j = 0; j <= sampleCount; j++) {
-            const t = j / sampleCount;
-            const px = p1.x + (p2.x - p1.x) * t;
-            const py = p1.y + (p2.y - p1.y) * t;
-            const dx = x - px;
-            const dy = y - py;
-            const dist = Math.sqrt(dx * dx + dy * dy);
-            if (dist < minDist) {
-              minDist = dist;
-              nearestIndex = i;
-              nearestT = t;
-              isInnerPath = false;
-            }
-          }
-        }
-        
-        // 거리 조건을 줄여서 트랙 경계에 더 가까운 곳에서만 연석 배치 가능
-        if (nearestIndex >= 0 && minDist < trackWidth * 1.5) {
-          const path = isInnerPath ? innerPath : outerPath;
-          
-          // 클릭한 지점에서 경로를 따라 지정된 길이만큼의 경로 추출 (세밀한 위치 고려)
-          const kerbPath = this.extractPathSegment(path, nearestIndex, kerbLength, nearestT);
-          
-          return {
-            path: isInnerPath ? innerPath : outerPath,
-            closestIndex: nearestIndex,
-            isInner: isInnerPath,
-            kerbPath: kerbPath,
-            trackWidth: trackWidth
-          };
-        }
-        
-        return null;
+        return window.TrackEditorUtils.findNearestTrackBoundary(x, y, this.points, trackWidth, kerbLength, isDragging, this);
+      }
+      
+      // 캐시 무효화 (포인트 변경 시 호출)
+      invalidatePathCache() {
+        this._smoothPathCache = null;
+        this._trackBoundsCache = null;
+        this._pointsHash = null;
       }
       
       // 경로에서 지정된 길이만큼의 세그먼트 추출 (세밀한 위치 고려)
       extractPathSegment(path, startIndex, targetLength, t = 0) {
-        if (!path || path.length === 0) return [];
-        
-        const segment = [];
-        
-        // 시작점 계산 (startIndex와 startIndex+1 사이의 정확한 위치)
-        let startPoint;
-        if (startIndex < path.length - 1 && t > 0) {
-          const p1 = path[startIndex];
-          const p2 = path[startIndex + 1];
-          startPoint = {
-            x: p1.x + (p2.x - p1.x) * t,
-            y: p1.y + (p2.y - p1.y) * t
-          };
-        } else {
-          startPoint = { ...path[startIndex] };
-        }
-        
-        // 중심점 추가
-        segment.push(startPoint);
-        
-        // 뒤쪽으로 확장 (경로의 절반 길이)
-        let backwardLength = 0;
-        // 시작 세그먼트의 뒤쪽 부분 길이 계산
-        if (startIndex < path.length - 1 && t > 0) {
-          const p1 = path[startIndex];
-          const p2 = path[startIndex + 1];
-          const segDist = Math.sqrt((p2.x - p1.x) ** 2 + (p2.y - p1.y) ** 2);
-          backwardLength += segDist * t;
-        }
-        
-        for (let i = startIndex - 1; i >= 0 && backwardLength < targetLength / 2; i--) {
-          const p1 = path[i];
-          const p2 = path[i + 1];
-          const dist = Math.sqrt((p2.x - p1.x) ** 2 + (p2.y - p1.y) ** 2);
-          backwardLength += dist;
-          segment.unshift({ ...p1 });
-        }
-        
-        // 앞쪽으로 확장 (경로의 절반 길이)
-        let forwardLength = 0;
-        // 시작 세그먼트의 앞쪽 부분 길이 계산
-        if (startIndex < path.length - 1 && t < 1) {
-          const p1 = path[startIndex];
-          const p2 = path[startIndex + 1];
-          const segDist = Math.sqrt((p2.x - p1.x) ** 2 + (p2.y - p1.y) ** 2);
-          forwardLength += segDist * (1 - t);
-        }
-        
-        for (let i = startIndex + 1; i < path.length && forwardLength < targetLength / 2; i++) {
-          const p1 = path[i - 1];
-          const p2 = path[i];
-          const dist = Math.sqrt((p2.x - p1.x) ** 2 + (p2.y - p1.y) ** 2);
-          forwardLength += dist;
-          segment.push({ ...p2 });
-        }
-        
-        return segment;
+        return window.TrackEditorUtils.extractPathSegment(path, startIndex, targetLength, t);
       }
 
       handleCanvasClick(e) {
@@ -1059,6 +486,36 @@
           const index = this.findKerbAt(point.x, point.y);
           if (index >= 0) {
             this.deleteKerb(index);
+          }
+        } else if (this.mode === 'addSpawn') {
+          this.addSpawn(point.x, point.y);
+        } else if (this.mode === 'deleteSpawn') {
+          const index = this.findSpawnAt(point.x, point.y);
+          if (index >= 0) {
+            this.deleteSpawn(index);
+          }
+        } else if (this.mode === 'setStartLine') {
+          // 시작선 설정: 클릭한 위치를 트랙 중심선에 스냅, 각도는 가장 가까운 트랙 포인트의 방향으로 계산
+          const snappedPoint = this.snapToTrackCenter(point.x, point.y);
+          const angle = this.calculateCheckpointAngle(snappedPoint.x, snappedPoint.y);
+          this.startLine = { x: snappedPoint.x, y: snappedPoint.y, angle: angle };
+          if (document.getElementById('startLineX')) document.getElementById('startLineX').value = snappedPoint.x;
+          if (document.getElementById('startLineY')) document.getElementById('startLineY').value = snappedPoint.y;
+          if (document.getElementById('startLineAngle')) document.getElementById('startLineAngle').value = angle.toFixed(3);
+          if (document.getElementById('startLineAngleDeg')) document.getElementById('startLineAngleDeg').value = Math.round(angle * 180 / Math.PI);
+          this.updateCodeOutput();
+          this.saveToStorage();
+          this.render();
+        } else if (this.mode === 'deleteStartLine') {
+          if (this.findStartLineAt(point.x, point.y)) {
+            this.startLine = { x: 0, y: 0, angle: 0 };
+            if (document.getElementById('startLineX')) document.getElementById('startLineX').value = 0;
+            if (document.getElementById('startLineY')) document.getElementById('startLineY').value = 0;
+            if (document.getElementById('startLineAngle')) document.getElementById('startLineAngle').value = '0.000';
+            if (document.getElementById('startLineAngleDeg')) document.getElementById('startLineAngleDeg').value = '0';
+            this.updateCodeOutput();
+            this.saveToStorage();
+            this.render();
           }
         }
       }
@@ -1112,6 +569,26 @@
             this.updateSelectedCheckpointInfo();
             this.updateKerbList();
             this.updateSelectedKerbInfo();
+          }
+        } else if (this.mode === 'moveSpawn') {
+          this.draggingSpawnIndex = this.findSpawnAt(point.x, point.y);
+          if (this.draggingSpawnIndex >= 0) {
+            this.selectedSpawnIndex = this.draggingSpawnIndex;
+            this.selectedPointIndex = -1;
+            this.selectedCheckpointIndex = -1;
+            this.selectedKerbIndex = -1;
+            this.updatePointList();
+            this.updateSelectedPointInfo();
+            this.updateCheckpointList();
+            this.updateSelectedCheckpointInfo();
+            this.updateKerbList();
+            this.updateSelectedKerbInfo();
+            this.updateSpawnList();
+            this.updateSelectedSpawnInfo();
+          }
+        } else if (this.mode === 'moveStartLine') {
+          if (this.findStartLineAt(point.x, point.y)) {
+            this.draggingStartLine = true;
           }
         }
       }
@@ -1177,12 +654,37 @@
             cursorChanged = true;
             this.render();
           }
+        } else if (this.mode === 'deleteSpawn' || this.mode === 'moveSpawn') {
+          const spawnIndex = this.findSpawnAt(point.x, point.y);
+          if (spawnIndex >= 0) {
+            if (this.hoveredSpawnIndex !== spawnIndex) {
+              this.hoveredSpawnIndex = spawnIndex;
+              this.canvas.style.cursor = this.mode === 'deleteSpawn' ? 'pointer' : 'move';
+              cursorChanged = true;
+              this.render();
+            }
+          } else if (this.hoveredSpawnIndex >= 0) {
+            this.hoveredSpawnIndex = -1;
+            this.canvas.style.cursor = this.mode === 'deleteSpawn' ? 'not-allowed' : 'move';
+            cursorChanged = true;
+            this.render();
+          }
+        } else if (this.mode === 'deleteStartLine' || this.mode === 'moveStartLine') {
+          const isHovered = this.findStartLineAt(point.x, point.y);
+          if (isHovered !== this.hoveredStartLine) {
+            this.hoveredStartLine = isHovered;
+            this.canvas.style.cursor = this.mode === 'deleteStartLine' ? 'pointer' : 'move';
+            cursorChanged = true;
+            this.render();
+          }
         } else {
           // 다른 모드일 때 호버 상태 초기화
-          if (this.hoveredPointIndex >= 0 || this.hoveredCheckpointIndex >= 0 || this.hoveredKerbIndex >= 0) {
+          if (this.hoveredPointIndex >= 0 || this.hoveredCheckpointIndex >= 0 || this.hoveredKerbIndex >= 0 || this.hoveredSpawnIndex >= 0 || this.hoveredStartLine) {
             this.hoveredPointIndex = -1;
             this.hoveredCheckpointIndex = -1;
             this.hoveredKerbIndex = -1;
+            this.hoveredSpawnIndex = -1;
+            this.hoveredStartLine = false;
             this.render();
           }
         }
@@ -1199,6 +701,8 @@
             y: point.y, 
             type: currentPoint.type || 'straight' 
           };
+          // 경로 캐시 무효화 (포인트 좌표가 변경됨)
+          this.invalidatePathCache();
           this.updateSelectedPointInfo();
           this.updateCodeOutput();
           this.saveToStorage(); // 저장
@@ -1221,7 +725,8 @@
           const currentKerb = this.curbs[this.draggingKerbIndex];
           // 트랙 경계를 따라 새로운 경로 생성
           const kerbLength = currentKerb.length || 300;
-          const boundary = this.findNearestTrackBoundary(point.x, point.y, kerbLength);
+          // 드래그 중에는 샘플링 개수를 줄여서 부드러운 이동 (true = isDragging)
+          const boundary = this.findNearestTrackBoundary(point.x, point.y, kerbLength, true);
           
           if (boundary && boundary.kerbPath && boundary.kerbPath.length >= 2) {
             this.curbs[this.draggingKerbIndex] = {
@@ -1235,6 +740,30 @@
             this.scheduleRender();
             // 저장은 드래그 종료 시에만 수행 (성능 최적화)
           }
+        } else if (this.draggingSpawnIndex >= 0 && this.mode === 'moveSpawn') {
+          const point = this.getCanvasPoint(e, false);
+          this.spawnPositions[this.draggingSpawnIndex] = {
+            x: point.x,
+            y: point.y
+          };
+          this.updateSelectedSpawnInfo();
+          this.updateCodeOutput();
+          this.saveToStorage();
+          this.render();
+        } else if (this.draggingStartLine && this.mode === 'moveStartLine') {
+          const point = this.getCanvasPoint(e, false);
+          // 트랙 중심선에 스냅
+          const snappedPoint = this.snapToTrackCenter(point.x, point.y);
+          // 각도는 가장 가까운 트랙 포인트의 방향으로 계산
+          const angle = this.calculateCheckpointAngle(snappedPoint.x, snappedPoint.y);
+          this.startLine = { x: snappedPoint.x, y: snappedPoint.y, angle: angle };
+          if (document.getElementById('startLineX')) document.getElementById('startLineX').value = snappedPoint.x;
+          if (document.getElementById('startLineY')) document.getElementById('startLineY').value = snappedPoint.y;
+          if (document.getElementById('startLineAngle')) document.getElementById('startLineAngle').value = angle.toFixed(3);
+          if (document.getElementById('startLineAngleDeg')) document.getElementById('startLineAngleDeg').value = Math.round(angle * 180 / Math.PI);
+          this.updateCodeOutput();
+          this.saveToStorage();
+          this.render();
         }
       }
 
@@ -1263,6 +792,36 @@
         
         if (this.draggingKerbIndex >= 0) {
           this.draggingKerbIndex = -1;
+          // 드래그 종료 시 정밀한 위치로 재계산 (isDragging=false로 샘플링 개수 20)
+          const point = this.getCanvasPoint(e, false);
+          const currentKerb = this.curbs[this.selectedKerbIndex];
+          if (currentKerb) {
+            const kerbLength = currentKerb.length || 300;
+            const boundary = this.findNearestTrackBoundary(point.x, point.y, kerbLength, false);
+            if (boundary && boundary.kerbPath && boundary.kerbPath.length >= 2) {
+              this.curbs[this.selectedKerbIndex] = {
+                centerPath: boundary.kerbPath,
+                width: currentKerb.width || 20,
+                length: kerbLength,
+                trackSide: boundary.isInner ? 'inner' : 'outer'
+              };
+            }
+          }
+          this.updateSelectedKerbInfo();
+          this.updateCodeOutput();
+          this.saveToStorage(); // 드래그 종료 시 저장
+          this.render(); // 최종 렌더링
+        }
+        
+        if (this.draggingSpawnIndex >= 0) {
+          this.draggingSpawnIndex = -1;
+          this.updateCodeOutput();
+          this.saveToStorage(); // 드래그 종료 시 저장
+          this.render(); // 최종 렌더링
+        }
+        
+        if (this.draggingStartLine) {
+          this.draggingStartLine = false;
           this.updateCodeOutput();
           this.saveToStorage(); // 드래그 종료 시 저장
           this.render(); // 최종 렌더링
@@ -1296,49 +855,15 @@
       }
       
       zoomIn() {
-        const centerX = this.canvas.width / 2;
-        const centerY = this.canvas.height / 2;
-        const worldBefore = this.canvasToWorld(centerX, centerY);
-        
-        this.zoom = Math.min(5, this.zoom * 1.2);
-        
-        const worldAfter = this.canvasToWorld(centerX, centerY);
-        this.offsetX += (worldBefore.x - worldAfter.x) * this.zoom;
-        this.offsetY += (worldBefore.y - worldAfter.y) * this.zoom;
-        
-        this.saveToStorage(); // 저장
-        this.render();
+        window.TrackEditorUIManager.zoomIn(this);
       }
       
       zoomOut() {
-        const centerX = this.canvas.width / 2;
-        const centerY = this.canvas.height / 2;
-        const worldBefore = this.canvasToWorld(centerX, centerY);
-        
-        this.zoom = Math.max(0.1, this.zoom / 1.2);
-        
-        const worldAfter = this.canvasToWorld(centerX, centerY);
-        this.offsetX += (worldBefore.x - worldAfter.x) * this.zoom;
-        this.offsetY += (worldBefore.y - worldAfter.y) * this.zoom;
-        
-        this.saveToStorage(); // 저장
-        this.render();
+        window.TrackEditorUIManager.zoomOut(this);
       }
       
       resetView() {
-        const width = parseInt(document.getElementById('mapWidth')?.value || '4500') || 4500;
-        const height = parseInt(document.getElementById('mapHeight')?.value || '3000') || 3000;
-        
-        // 맵을 화면 중앙에 맞추기
-        const scaleX = this.canvas.width / width;
-        const scaleY = this.canvas.height / height;
-        this.zoom = Math.min(scaleX, scaleY) * 0.9; // 약간의 여유 공간
-        
-        this.offsetX = (this.canvas.width - width * this.zoom) / 2;
-        this.offsetY = (this.canvas.height - height * this.zoom) / 2;
-        
-        this.saveToStorage(); // 저장
-        this.render();
+        window.TrackEditorTrackManager.resetView(this);
       }
       
       handleMinimapMouseDown(e) {
@@ -1513,776 +1038,134 @@
       }
 
       addPoint(x, y) {
-        // 기본값은 직선, 이전 포인트가 곡선이면 곡선으로 설정
-        const type = this.points.length > 0 && this.points[this.points.length - 1].type === 'curve' ? 'curve' : 'straight';
-        this.points.push({ x, y, type });
-        this.selectedPointIndex = this.points.length - 1;
-        this.selectedCheckpointIndex = -1;
-        this.updatePointList();
-        this.updateSelectedPointInfo();
-        this.updateCheckpointList();
-        this.updateSelectedCheckpointInfo();
-        this.updateCodeOutput();
-        this.saveToStorage(); // 저장
-        this.render();
+        window.TrackEditorPointManager.addPoint(this, x, y);
       }
       
       addCheckpoint(x, y, angle = 0) {
-        this.checkpoints.push({ x, y, angle });
-        this.selectedCheckpointIndex = this.checkpoints.length - 1;
-        this.selectedPointIndex = -1;
-        this.updatePointList();
-        this.updateSelectedPointInfo();
-        this.updateCheckpointList();
-        this.updateSelectedCheckpointInfo();
-        this.updateCodeOutput();
-        this.saveToStorage(); // 저장
-        this.render();
+        window.TrackEditorCheckpointManager.addCheckpoint(this, x, y, angle);
       }
       
       deleteCheckpoint(index) {
-        this.checkpoints.splice(index, 1);
-        if (this.selectedCheckpointIndex >= this.checkpoints.length) {
-          this.selectedCheckpointIndex = this.checkpoints.length - 1;
-        }
-        this.updateCheckpointList();
-        this.updateSelectedCheckpointInfo();
-        this.updateCodeOutput();
-        this.saveToStorage(); // 저장
-        this.render();
+        window.TrackEditorCheckpointManager.deleteCheckpoint(this, index);
       }
       
       addKerb(x, y, length = 300) {
-        // 트랙 경계를 따라 경로 기반 연석 추가
-        console.log('addKerb called:', { x, y, length });
-        
-        const boundary = this.findNearestTrackBoundary(x, y, length);
-        if (!boundary || !boundary.kerbPath || boundary.kerbPath.length < 2) {
-          console.warn('Unable to create kerb: no valid path found');
-          return;
-        }
-        
-        this.curbs.push({ 
-          centerPath: boundary.kerbPath, // 연석의 중심 경로
-          width: 20, // 연석의 두께 (폭)
-          length: length, // 연석의 길이
-          trackSide: boundary.isInner ? 'inner' : 'outer'
-        });
-        
-        this.selectedKerbIndex = this.curbs.length - 1;
-        this.selectedPointIndex = -1;
-        this.selectedCheckpointIndex = -1;
-        this.updatePointList();
-        this.updateSelectedPointInfo();
-        this.updateCheckpointList();
-        this.updateSelectedCheckpointInfo();
-        this.updateKerbList();
-        this.updateSelectedKerbInfo();
-        this.updateCodeOutput();
-        this.saveToStorage(); // 저장
-        this.render();
-        console.log('Kerb added, total curbs:', this.curbs.length);
+        window.TrackEditorKerbManager.addKerb(this, x, y, length);
       }
       
       deleteKerb(index) {
-        this.curbs.splice(index, 1);
-        if (this.selectedKerbIndex >= this.curbs.length) {
-          this.selectedKerbIndex = this.curbs.length - 1;
-        }
-        this.updateKerbList();
-        this.updateSelectedKerbInfo();
-        this.updateCodeOutput();
-        this.saveToStorage(); // 저장
-        this.render();
+        window.TrackEditorKerbManager.deleteKerb(this, index);
+      }
+      
+      addSpawn(x, y) {
+        window.TrackEditorSpawnManager.addSpawn(this, x, y);
+      }
+      
+      deleteSpawn(index) {
+        window.TrackEditorSpawnManager.deleteSpawn(this, index);
+      }
+      
+      selectSpawn(index) {
+        window.TrackEditorSpawnManager.selectSpawn(this, index);
+      }
+      
+      updateSpawnList() {
+        window.TrackEditorSpawnManager.updateSpawnList(this);
+      }
+      
+      updateSelectedSpawnInfo() {
+        window.TrackEditorSpawnManager.updateSelectedSpawnInfo(this);
+      }
+      
+      updateSelectedSpawn() {
+        window.TrackEditorSpawnManager.updateSelectedSpawn(this);
       }
       
       selectKerb(index) {
-        this.selectedKerbIndex = index;
-        this.selectedPointIndex = -1;
-        this.selectedCheckpointIndex = -1;
-        this.updatePointList();
-        this.updateSelectedPointInfo();
-        this.updateCheckpointList();
-        this.updateSelectedCheckpointInfo();
-        this.updateKerbList();
-        this.updateSelectedKerbInfo();
-        this.render();
+        window.TrackEditorKerbManager.selectKerb(this, index);
       }
       
       updateKerbList() {
-        const list = document.getElementById('kerbList');
-        if (!list) return;
-        
-        if (this.curbs.length === 0) {
-          list.innerHTML = '<div style="color: #666; font-size: 11px; text-align: center; padding: 20px;">연석을 추가하려면 연석 추가 모드를 선택하세요</div>';
-          return;
-        }
-
-        list.innerHTML = this.curbs.map((kerb, i) => {
-          let displayInfo = '';
-          if (kerb.centerPath && kerb.centerPath.length > 0) {
-            // 경로 기반 연석
-            const midIdx = Math.floor(kerb.centerPath.length / 2);
-            const midPoint = kerb.centerPath[midIdx];
-            displayInfo = `
-              <span>연석 ${i + 1}</span>
-              <span class="point-coords">${kerb.trackSide === 'inner' ? '내부' : '외부'}</span>
-              <span style="font-size: 10px; color: #ff9500;">
-                ${kerb.length || 300}px
-              </span>
-            `;
-          } else {
-            // 구형 포맷
-            displayInfo = `
-              <span>연석 ${i + 1}</span>
-              <span class="point-coords">(${kerb.x}, ${kerb.y})</span>
-              <span style="font-size: 10px; color: #ff9500;">
-                ${kerb.width || 200}px
-              </span>
-            `;
-          }
-          
-          return `
-            <div class="point-item ${i === this.selectedKerbIndex ? 'selected' : ''}" 
-                 data-kerb-index="${i}">
-              ${displayInfo}
-              <div class="point-actions">
-                <button class="delete-kerb-btn" data-kerb-index="${i}">삭제</button>
-              </div>
-            </div>
-          `;
-        }).join('');
-        
-        // 이벤트 리스너 추가
-        list.querySelectorAll('.point-item').forEach(item => {
-          item.addEventListener('click', (e) => {
-            if (!e.target.classList.contains('delete-kerb-btn')) {
-              const index = parseInt(item.dataset.kerbIndex);
-              this.selectKerb(index);
-            }
-          });
-        });
-        
-        // 삭제 버튼 이벤트 리스너
-        list.querySelectorAll('.delete-kerb-btn').forEach(btn => {
-          btn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            const index = parseInt(btn.dataset.kerbIndex);
-            this.deleteKerb(index);
-          });
-        });
+        window.TrackEditorKerbManager.updateKerbList(this);
       }
       
       updateSelectedKerbInfo() {
-        const infoDiv = document.getElementById('selectedKerbInfo');
-        if (!infoDiv) return;
-        
-        const editGroup = document.getElementById('kerbEditGroup');
-        const editGroup2 = document.getElementById('kerbEditGroup2');
-        const editGroup3 = document.getElementById('kerbEditGroup3');
-        const editGroup4 = document.getElementById('kerbEditGroup4');
-        const editGroup5 = document.getElementById('kerbEditGroup5');
-
-        if (this.selectedKerbIndex >= 0 && this.selectedKerbIndex < this.curbs.length) {
-          const kerb = this.curbs[this.selectedKerbIndex];
-          
-          // 경로 기반 연석
-          if (kerb.centerPath && kerb.centerPath.length > 0) {
-            const sideText = kerb.trackSide === 'inner' ? '내부' : '외부';
-            const widthText = kerb.width || 20;
-            const lengthText = kerb.length || 300;
-            infoDiv.textContent = `연석 ${this.selectedKerbIndex + 1}: ${sideText} | 폭: ${widthText}px, 길이: ${lengthText}px`;
-            
-            // 길이 조절만 가능하도록 (위치는 드래그로)
-            if (document.getElementById('kerbLength')) {
-              document.getElementById('kerbLength').value = lengthText;
-            }
-            // 다른 필드들은 숨기거나 비활성화
-            if (editGroup) editGroup.style.display = 'none';
-            if (editGroup2) editGroup2.style.display = 'none';
-            if (editGroup3) editGroup3.style.display = 'none';
-            if (editGroup4) editGroup4.style.display = 'none';
-            if (editGroup5) editGroup5.style.display = 'block'; // 길이만 표시
-          }
-          // 구형 포맷
-          else if (kerb.x !== undefined && kerb.y !== undefined) {
-            const angleDeg = ((kerb.angle || 0) * 180 / Math.PI).toFixed(1);
-            infoDiv.textContent = `연석 ${this.selectedKerbIndex + 1}: (${kerb.x}, ${kerb.y}) [${angleDeg}°] 길이: ${kerb.width || 200}px`;
-            if (document.getElementById('kerbX')) document.getElementById('kerbX').value = kerb.x;
-            if (document.getElementById('kerbY')) document.getElementById('kerbY').value = kerb.y;
-            if (document.getElementById('kerbAngle')) document.getElementById('kerbAngle').value = (kerb.angle || 0).toFixed(3);
-            if (document.getElementById('kerbAngleDeg')) document.getElementById('kerbAngleDeg').value = Math.round((kerb.angle || 0) * 180 / Math.PI);
-            if (document.getElementById('kerbLength')) document.getElementById('kerbLength').value = kerb.width || 200;
-            if (editGroup) editGroup.style.display = 'block';
-            if (editGroup2) editGroup2.style.display = 'block';
-            if (editGroup3) editGroup3.style.display = 'block';
-            if (editGroup4) editGroup4.style.display = 'block';
-            if (editGroup5) editGroup5.style.display = 'block';
-          }
-        } else {
-          infoDiv.textContent = '연석을 선택하세요';
-          if (editGroup) editGroup.style.display = 'none';
-          if (editGroup2) editGroup2.style.display = 'none';
-          if (editGroup3) editGroup3.style.display = 'none';
-          if (editGroup4) editGroup4.style.display = 'none';
-          if (editGroup5) editGroup5.style.display = 'none';
-        }
+        window.TrackEditorKerbManager.updateSelectedKerbInfo(this);
       }
       
       updateSelectedKerb() {
-        if (this.selectedKerbIndex >= 0) {
-          const currentKerb = this.curbs[this.selectedKerbIndex];
-          const length = parseFloat(document.getElementById('kerbLength')?.value || 300);
-          
-          // 경로 기반 연석
-          if (currentKerb.centerPath && currentKerb.centerPath.length > 0) {
-            if (!isNaN(length) && length > 0) {
-              // 길이만 변경 (중심점 유지하면서 경로 재생성)
-              const midIdx = Math.floor(currentKerb.centerPath.length / 2);
-              const midPoint = currentKerb.centerPath[midIdx];
-              
-              // 중심점 기준으로 새 경로 생성
-              const boundary = this.findNearestTrackBoundary(midPoint.x, midPoint.y, length);
-              if (boundary && boundary.kerbPath && boundary.kerbPath.length >= 2) {
-                this.curbs[this.selectedKerbIndex] = {
-                  centerPath: boundary.kerbPath,
-                  width: currentKerb.width || 20,
-                  length: length,
-                  trackSide: boundary.isInner ? 'inner' : 'outer'
-                };
-              } else {
-                // 경로 생성 실패 시 길이만 업데이트
-                currentKerb.length = length;
-              }
-            }
-          }
-          // 구형 포맷
-          else if (currentKerb.x !== undefined && currentKerb.y !== undefined) {
-            const x = parseFloat(document.getElementById('kerbX')?.value || currentKerb.x);
-            const y = parseFloat(document.getElementById('kerbY')?.value || currentKerb.y);
-            const angle = parseFloat(document.getElementById('kerbAngle')?.value || currentKerb.angle || 0);
-            if (!isNaN(x) && !isNaN(y) && !isNaN(angle) && !isNaN(length)) {
-              this.curbs[this.selectedKerbIndex] = { 
-                x, 
-                y, 
-                angle, 
-                width: length,
-                height: currentKerb.height || 20
-              };
-            }
-          }
-          
-          this.updateSelectedKerbInfo();
-          this.updateCodeOutput();
-          this.saveToStorage(); // 저장
-          this.render();
-        }
+        window.TrackEditorKerbManager.updateSelectedKerb(this);
       }
 
       deletePoint(index) {
-        this.points.splice(index, 1);
-        if (this.selectedPointIndex >= this.points.length) {
-          this.selectedPointIndex = this.points.length - 1;
-        }
-        this.updatePointList();
-        this.updateSelectedPointInfo();
-        this.updateCodeOutput();
-        this.saveToStorage(); // 저장
-        this.render();
+        window.TrackEditorPointManager.deletePoint(this, index);
       }
 
       updateSelectedPoint() {
-        if (this.selectedPointIndex >= 0) {
-          const x = parseFloat(document.getElementById('pointX').value);
-          const y = parseFloat(document.getElementById('pointY').value);
-          if (!isNaN(x) && !isNaN(y)) {
-            const currentPoint = this.points[this.selectedPointIndex];
-            this.points[this.selectedPointIndex] = { 
-              x, 
-              y, 
-              type: currentPoint.type || 'straight' 
-            };
-            this.updateCodeOutput();
-            this.saveToStorage(); // 저장
-            this.render();
-          }
-        }
+        window.TrackEditorPointManager.updateSelectedPoint(this);
       }
 
       updateSelectedPointInfo() {
-        const infoDiv = document.getElementById('selectedPointInfo');
-        const editGroup = document.getElementById('pointEditGroup');
-        const editGroup2 = document.getElementById('pointEditGroup2');
-        const editGroup3 = document.getElementById('pointEditGroup3');
-
-        if (this.selectedPointIndex >= 0 && this.selectedPointIndex < this.points.length) {
-          const p = this.points[this.selectedPointIndex];
-          const typeText = p.type === 'curve' ? '곡선' : '직선';
-          infoDiv.textContent = `포인트 ${this.selectedPointIndex + 1}: (${p.x}, ${p.y}) [${typeText}]`;
-          document.getElementById('pointX').value = p.x;
-          document.getElementById('pointY').value = p.y;
-          editGroup.style.display = 'block';
-          editGroup2.style.display = 'block';
-          editGroup3.style.display = 'block';
-          
-          // 타입 버튼 상태 업데이트
-          const straightBtn = document.getElementById('setStraightBtn');
-          const curveBtn = document.getElementById('setCurveBtn');
-          straightBtn.classList.toggle('active', p.type === 'straight');
-          curveBtn.classList.toggle('active', p.type === 'curve');
-        } else {
-          infoDiv.textContent = '포인트를 선택하세요';
-          editGroup.style.display = 'none';
-          editGroup2.style.display = 'none';
-          editGroup3.style.display = 'none';
-        }
+        window.TrackEditorPointManager.updateSelectedPointInfo(this);
       }
       
       setPointType(type) {
-        if (this.selectedPointIndex >= 0 && this.selectedPointIndex < this.points.length) {
-          this.points[this.selectedPointIndex].type = type;
-          this.updatePointList();
-          this.updateSelectedPointInfo();
-          this.updateCodeOutput();
-          this.saveToStorage(); // 저장
-          this.render();
-        }
+        window.TrackEditorPointManager.setPointType(this, type);
       }
 
       updatePointList() {
-        const list = document.getElementById('pointList');
-        if (this.points.length === 0) {
-          list.innerHTML = '<div style="color: #666; font-size: 11px; text-align: center; padding: 20px;">포인트를 추가하려면 캔버스를 클릭하세요</div>';
-          return;
-        }
-
-        list.innerHTML = this.points.map((p, i) => `
-          <div class="point-item ${i === this.selectedPointIndex ? 'selected' : ''}" 
-               data-point-index="${i}">
-            <span>포인트 ${i + 1}</span>
-            <span class="point-coords">(${p.x}, ${p.y})</span>
-            <span style="font-size: 10px; color: ${p.type === 'curve' ? '#ff6b6b' : '#4ecdc4'};">
-              ${p.type === 'curve' ? '곡선' : '직선'}
-            </span>
-            <div class="point-actions">
-              <button class="delete-point-btn" data-point-index="${i}">삭제</button>
-            </div>
-          </div>
-        `).join('');
-        
-        // 이벤트 리스너 추가
-        list.querySelectorAll('.point-item').forEach(item => {
-          item.addEventListener('click', (e) => {
-            // 삭제 버튼 클릭이 아닌 경우에만 포인트 선택
-            if (!e.target.classList.contains('delete-point-btn')) {
-              const index = parseInt(item.dataset.pointIndex);
-              this.selectPoint(index);
-            }
-          });
-        });
-        
-        // 삭제 버튼 이벤트 리스너
-        list.querySelectorAll('.delete-point-btn').forEach(btn => {
-          btn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            const index = parseInt(btn.dataset.pointIndex);
-            this.deletePoint(index);
-          });
-        });
+        window.TrackEditorPointManager.updatePointList(this);
       }
 
       selectPoint(index) {
-        this.selectedPointIndex = index;
-        this.selectedCheckpointIndex = -1;
-        this.updatePointList();
-        this.updateSelectedPointInfo();
-        this.updateCheckpointList();
-        this.updateSelectedCheckpointInfo();
-        this.render();
+        window.TrackEditorPointManager.selectPoint(this, index);
       }
       
       selectCheckpoint(index) {
-        this.selectedCheckpointIndex = index;
-        this.selectedPointIndex = -1;
-        this.updatePointList();
-        this.updateSelectedPointInfo();
-        this.updateCheckpointList();
-        this.updateSelectedCheckpointInfo();
-        this.render();
+        window.TrackEditorCheckpointManager.selectCheckpoint(this, index);
       }
       
       updateCheckpointList() {
-        const list = document.getElementById('checkpointList');
-        if (!list) return;
-        
-        if (this.checkpoints.length === 0) {
-          list.innerHTML = '<div style="color: #666; font-size: 11px; text-align: center; padding: 20px;">체크포인트를 추가하려면 체크포인트 추가 모드를 선택하세요</div>';
-          return;
-        }
-
-        list.innerHTML = this.checkpoints.map((cp, i) => `
-          <div class="point-item ${i === this.selectedCheckpointIndex ? 'selected' : ''}" 
-               data-checkpoint-index="${i}">
-            <span>체크포인트 ${i + 1}</span>
-            <span class="point-coords">(${cp.x}, ${cp.y})</span>
-            <span style="font-size: 10px; color: #ffd700;">
-              ${(cp.angle * 180 / Math.PI).toFixed(0)}°
-            </span>
-            <div class="point-actions">
-              <button class="delete-checkpoint-btn" data-checkpoint-index="${i}">삭제</button>
-            </div>
-          </div>
-        `).join('');
-        
-        // 이벤트 리스너 추가
-        list.querySelectorAll('.point-item').forEach(item => {
-          item.addEventListener('click', (e) => {
-            // 삭제 버튼 클릭이 아닌 경우에만 체크포인트 선택
-            if (!e.target.classList.contains('delete-checkpoint-btn')) {
-              const index = parseInt(item.dataset.checkpointIndex);
-              this.selectCheckpoint(index);
-            }
-          });
-        });
-        
-        // 삭제 버튼 이벤트 리스너
-        list.querySelectorAll('.delete-checkpoint-btn').forEach(btn => {
-          btn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            const index = parseInt(btn.dataset.checkpointIndex);
-            this.deleteCheckpoint(index);
-          });
-        });
+        window.TrackEditorCheckpointManager.updateCheckpointList(this);
       }
       
       updateSelectedCheckpointInfo() {
-        const infoDiv = document.getElementById('selectedCheckpointInfo');
-        if (!infoDiv) return;
-        
-        const editGroup = document.getElementById('checkpointEditGroup');
-        const editGroup2 = document.getElementById('checkpointEditGroup2');
-        const editGroup3 = document.getElementById('checkpointEditGroup3');
-        const editGroup4 = document.getElementById('checkpointEditGroup4');
-
-        if (this.selectedCheckpointIndex >= 0 && this.selectedCheckpointIndex < this.checkpoints.length) {
-          const cp = this.checkpoints[this.selectedCheckpointIndex];
-          const angleDeg = (cp.angle * 180 / Math.PI).toFixed(1);
-          infoDiv.textContent = `체크포인트 ${this.selectedCheckpointIndex + 1}: (${cp.x}, ${cp.y}) [${angleDeg}°]`;
-          if (document.getElementById('checkpointX')) document.getElementById('checkpointX').value = cp.x;
-          if (document.getElementById('checkpointY')) document.getElementById('checkpointY').value = cp.y;
-          if (document.getElementById('checkpointAngle')) document.getElementById('checkpointAngle').value = cp.angle.toFixed(3);
-          if (document.getElementById('checkpointAngleDeg')) document.getElementById('checkpointAngleDeg').value = Math.round(cp.angle * 180 / Math.PI);
-          if (editGroup) editGroup.style.display = 'block';
-          if (editGroup2) editGroup2.style.display = 'block';
-          if (editGroup3) editGroup3.style.display = 'block';
-          if (editGroup4) editGroup4.style.display = 'block';
-        } else {
-          infoDiv.textContent = '체크포인트를 선택하세요';
-          if (editGroup) editGroup.style.display = 'none';
-          if (editGroup2) editGroup2.style.display = 'none';
-          if (editGroup3) editGroup3.style.display = 'none';
-          if (editGroup4) editGroup4.style.display = 'none';
-        }
+        window.TrackEditorCheckpointManager.updateSelectedCheckpointInfo(this);
       }
       
       updateSelectedCheckpoint() {
-        if (this.selectedCheckpointIndex >= 0) {
-          const x = parseFloat(document.getElementById('checkpointX').value);
-          const y = parseFloat(document.getElementById('checkpointY').value);
-          const angle = parseFloat(document.getElementById('checkpointAngle').value);
-          if (!isNaN(x) && !isNaN(y) && !isNaN(angle)) {
-            this.checkpoints[this.selectedCheckpointIndex] = { x, y, angle };
-            this.updateSelectedCheckpointInfo();
-            this.updateCodeOutput();
-            this.saveToStorage(); // 저장
-            this.render();
-          }
-        }
+        window.TrackEditorCheckpointManager.updateSelectedCheckpoint(this);
       }
 
       // 직선과 곡선을 구분하여 경로 생성 (전환 지점 부드럽게 처리)
       getSmoothPath(points, targetPoints = 400) {
-        if (points.length < 2) return points;
-        
-        const smoothPath = [];
-        const numPoints = points.length;
-        
-        for (let i = 0; i < numPoints; i++) {
-          const p1 = points[i];
-          const p2 = points[(i + 1) % numPoints];
-          const p0 = points[(i - 1 + numPoints) % numPoints];
-          const p3 = points[(i + 2) % numPoints];
-          
-          const p1Type = p1.type || 'straight';
-          const p2Type = p2.type || 'straight';
-          
-          // 전환 구간 감지: 직선->곡선 또는 곡선->직선
-          const isTransition = (p1Type === 'straight' && p2Type === 'curve') || 
-                               (p1Type === 'curve' && p2Type === 'straight');
-          
-          // 곡선 구간 또는 전환 구간인지 확인
-          const isCurve = p1Type === 'curve' || p2Type === 'curve' || isTransition;
-          
-          if (isCurve && numPoints >= 4) {
-            // 곡선 구간 또는 전환 구간: Catmull-Rom 스플라인 사용
-            const steps = Math.ceil(targetPoints / numPoints);
-            
-            // 전환 구간인 경우 더 많은 포인트로 부드럽게 처리
-            const transitionSteps = isTransition ? steps * 1.5 : steps;
-            
-            for (let j = 0; j < transitionSteps; j++) {
-              const t = j / transitionSteps;
-              const t2 = t * t;
-              const t3 = t2 * t;
-              
-              const x = 0.5 * (
-                (2 * p1.x) +
-                (-p0.x + p2.x) * t +
-                (2 * p0.x - 5 * p1.x + 4 * p2.x - p3.x) * t2 +
-                (-p0.x + 3 * p1.x - 3 * p2.x + p3.x) * t3
-              );
-              
-              const y = 0.5 * (
-                (2 * p1.y) +
-                (-p0.y + p2.y) * t +
-                (2 * p0.y - 5 * p1.y + 4 * p2.y - p3.y) * t2 +
-                (-p0.y + 3 * p1.y - 3 * p2.y + p3.y) * t3
-              );
-              
-              smoothPath.push({ x, y });
-            }
-          } else {
-            // 순수 직선 구간: 단순 선형 보간
-            const steps = Math.max(2, Math.ceil(targetPoints / numPoints / 2));
-            for (let j = 0; j <= steps; j++) {
-              const t = j / steps;
-              smoothPath.push({
-                x: p1.x + (p2.x - p1.x) * t,
-                y: p1.y + (p2.y - p1.y) * t
-              });
-            }
-          }
-        }
-        
-        return smoothPath;
+        return window.TrackEditorUtils.getSmoothPath(points, targetPoints);
       }
       
       // 곡선 연석 그리기
       // 경로 기반 연석 그리기 - 하나의 연속된 형태로 (트랙 바깥쪽에만 배치)
       drawPathBasedKerb(centerPath, kerbWidth, trackSide = 'outer') {
-        if (!centerPath || centerPath.length < 2) return;
-
-        // 누적 길이 테이블
-        const cumulative = [0];
-        for (let i = 1; i < centerPath.length; i++) {
-          const p1 = centerPath[i - 1];
-          const p2 = centerPath[i];
-          const dx = p2.x - p1.x;
-          const dy = p2.y - p1.y;
-          cumulative.push(cumulative[i - 1] + Math.hypot(dx, dy));
-        }
-        const totalLength = cumulative[cumulative.length - 1];
-
-        // 경로상의 특정 거리에서 위치와 법선을 계산
-        const getPointAt = (dist) => {
-          const clamped = Math.min(Math.max(dist, 0), totalLength);
-          // 해당 세그먼트 찾기
-          let idx = cumulative.findIndex((len) => len >= clamped);
-          if (idx === -1) idx = cumulative.length - 1;
-          if (idx === 0) idx = 1;
-
-          const p1 = centerPath[idx - 1];
-          const p2 = centerPath[idx];
-          const segLen = cumulative[idx] - cumulative[idx - 1] || 1;
-          const t = (clamped - cumulative[idx - 1]) / segLen;
-
-          const x = p1.x + (p2.x - p1.x) * t;
-          const y = p1.y + (p2.y - p1.y) * t;
-
-          const dx = p2.x - p1.x;
-          const dy = p2.y - p1.y;
-          const len = Math.hypot(dx, dy) || 1;
-
-          // 기본 법선 (좌측 기준)
-          const nx = -dy / len;
-          const ny = dx / len;
-          const sign = trackSide === 'inner' ? 1 : -1;
-
-          return {
-            track: { x, y },
-            outer: { x: x + nx * kerbWidth * sign, y: y + ny * kerbWidth * sign },
-            tangent: { x: dx / len, y: dy / len }
-          };
-        };
-
-        const blockSize = 40; // 색상 패턴 길이
-        const stepSize = 0.5; // 경로를 따라 그릴 때의 간격 (작을수록 부드러움)
-
-        this.ctx.save();
-        this.ctx.globalCompositeOperation = 'source-over';
-
-        // 경로를 따라 색상만 변경하면서 연속적으로 그리기
-        // 색상이 바뀌는 지점들을 먼저 찾기
-        const colorChangePoints = [0];
-        for (let d = blockSize; d < totalLength; d += blockSize) {
-          colorChangePoints.push(d);
-        }
-        colorChangePoints.push(totalLength);
-
-        // 각 색상 블록을 연속적으로 그리기
-        for (let i = 0; i < colorChangePoints.length - 1; i++) {
-          const startDist = colorChangePoints[i];
-          const endDist = colorChangePoints[i + 1];
-          const blockIdx = Math.floor(startDist / blockSize);
-          const isRed = blockIdx % 2 === 0;
-          const color = isRed ? '#ff0000' : '#ffffff';
-
-          // 트랙 경계선과 바깥쪽 경계선을 따라 부드럽게 그리기
-          this.ctx.beginPath();
-          
-          // 트랙 경계선 (앞에서 뒤로)
-          for (let d = startDist; d <= endDist; d += stepSize) {
-            const dist = Math.min(d, endDist);
-            const pt = getPointAt(dist);
-            if (d === startDist) {
-              this.ctx.moveTo(pt.track.x, pt.track.y);
-            } else {
-              this.ctx.lineTo(pt.track.x, pt.track.y);
-            }
-          }
-          
-          // 바깥쪽 경계선 (뒤에서 앞으로)
-          for (let d = endDist; d >= startDist; d -= stepSize) {
-            const dist = Math.max(d, startDist);
-            const pt = getPointAt(dist);
-            this.ctx.lineTo(pt.outer.x, pt.outer.y);
-          }
-          
-          this.ctx.closePath();
-          this.ctx.fillStyle = color;
-          this.ctx.fill();
-        }
-
-        // 검은색 테두리 제거됨
-
-        this.ctx.restore();
+        window.TrackEditorRenderer.drawPathBasedKerb(this.ctx, centerPath, kerbWidth, trackSide);
       }
       
       // 구형 곡선 연석 그리기 (하위 호환성)
       drawCurvedKerb(pathSegment, height, isSelected) {
-        if (!pathSegment || pathSegment.length < 2) return;
-        
-        const blockWidth = 20; // 각 블록의 너비
-        const blockHeight = height;
-        
-        this.ctx.save();
-        this.ctx.globalCompositeOperation = 'source-over';
-        
-        // 곡선 경로를 따라 작은 블록들을 그리기
-        for (let i = 0; i < pathSegment.length - 1; i++) {
-          const p1 = pathSegment[i];
-          const p2 = pathSegment[i + 1];
-          
-          // 두 점 사이의 거리와 각도 계산
-          const dx = p2.x - p1.x;
-          const dy = p2.y - p1.y;
-          const dist = Math.sqrt(dx * dx + dy * dy);
-          const angle = Math.atan2(dy, dx);
-          
-          // 블록 개수 계산
-          const blockCount = Math.max(1, Math.floor(dist / blockWidth));
-          
-          for (let j = 0; j < blockCount; j++) {
-            const t = j / blockCount;
-            const x = p1.x + dx * t;
-            const y = p1.y + dy * t;
-            const isRed = (i * blockCount + j) % 2 === 0;
-            
-            this.ctx.save();
-            this.ctx.translate(x, y);
-            this.ctx.rotate(angle);
-            
-            // 흰색/빨간색 패턴 (선택 상태와 관계없이 항상 빨간색/하얀색)
-            const color = isRed ? '#ff0000' : '#ffffff';
-            this.ctx.fillStyle = color;
-            this.ctx.fillRect(-blockWidth / 2, -blockHeight / 2, blockWidth, blockHeight);
-            
-            // 검은색 테두리 제거됨
-            
-            this.ctx.restore();
-          }
-        }
-        
-        this.ctx.restore();
+        window.TrackEditorRenderer.drawCurvedKerb(this.ctx, pathSegment, height, isSelected);
       }
 
       // 트랙 경계 생성 (중앙선에서 좌우로 확장)
       getTrackBounds(centerPath, trackWidth) {
-        const innerPath = [];
-        const outerPath = [];
-        
-        for (let i = 0; i < centerPath.length; i++) {
-          const curr = centerPath[i];
-          const prev = centerPath[(i - 1 + centerPath.length) % centerPath.length];
-          const next = centerPath[(i + 1) % centerPath.length];
-          
-          // 방향 벡터 계산
-          const dx = next.x - prev.x;
-          const dy = next.y - prev.y;
-          const len = Math.sqrt(dx * dx + dy * dy);
-          
-          if (len > 0) {
-            // 법선 벡터 (좌우)
-            const nx = -dy / len;
-            const ny = dx / len;
-            
-            const halfWidth = trackWidth / 2;
-            
-            innerPath.push({
-              x: curr.x + nx * halfWidth,
-              y: curr.y + ny * halfWidth
-            });
-            
-            outerPath.push({
-              x: curr.x - nx * halfWidth,
-              y: curr.y - ny * halfWidth
-            });
-          } else {
-            // 길이가 0이면 그대로 사용
-            innerPath.push({ x: curr.x, y: curr.y });
-            outerPath.push({ x: curr.x, y: curr.y });
-          }
-        }
-        
-        return { innerPath, outerPath };
+        return window.TrackEditorUtils.getTrackBounds(centerPath, trackWidth);
       }
 
       // 부드러운 경로 그리기
       drawSmoothPath(ctx, path, closed = false) {
-        if (path.length < 2) return;
-        
-        ctx.beginPath();
-        ctx.moveTo(path[0].x, path[0].y);
-        
-        for (let i = 1; i < path.length; i++) {
-          ctx.lineTo(path[i].x, path[i].y);
-        }
-        
-        if (closed && path.length > 2) {
-          ctx.closePath();
-        }
+        window.TrackEditorRenderer.drawSmoothPath(ctx, path, closed);
       }
 
       // 렌더링 스케줄링 (부드러운 애니메이션을 위해)
       scheduleRender() {
-        if (this.animationFrameId) return; // 이미 스케줄링됨
-        
-        this.animationFrameId = requestAnimationFrame(() => {
-          this.render();
-          this.animationFrameId = null;
-          this.pendingRender = false;
-        });
-        this.pendingRender = true;
+        window.TrackEditorRenderer.scheduleRender(this);
       }
 
       render() {
@@ -2639,6 +1522,145 @@
           }
         });
         
+// 시작선 그리기 (체커플래그 패턴 - 트랙 전체)
+if (this.startLine && (this.startLine.x !== 0 || this.startLine.y !== 0)) {
+  const isHovered =
+    this.hoveredStartLine &&
+    (this.mode === 'deleteStartLine' || this.mode === 'moveStartLine');
+
+  const trackWidth =
+    parseInt(document.getElementById('trackWidth')?.value || '120') || 120;
+  const halfTrackWidth = trackWidth / 2;
+
+  const perpAngle = this.startLine.angle + Math.PI / 2;
+  const cos = Math.cos(perpAngle);
+  const sin = Math.sin(perpAngle);
+
+  // 체커 플래그 크기 계산 (호버 외곽선과 체커 플래그 모두에 사용)
+  const thickness = 24; // 시작선 두께 (체커 플래그 길이)
+  const blockSize = 14; // 체커 블록 크기 (더 작게 하여 정교한 조정 가능)
+  // 트랙 전체 너비보다 조금 더 길게 (가로 길이 확장)
+  const extendedWidth = trackWidth * 0.98; // 트랙 너비의 104%
+  const blockCount = Math.round(extendedWidth / blockSize, 5);
+  const actualWidth = blockCount * blockSize; // 실제 그려질 너비 (blockSize 단위로 정교하게 조정)
+  const halfActualWidth = actualWidth / 2;
+
+  // === 호버 외곽선 === (체커 플래그 사각형 영역)
+  if (isHovered) {
+    this.ctx.save();
+    this.ctx.translate(this.startLine.x, this.startLine.y);
+    this.ctx.rotate(this.startLine.angle + Math.PI / 2);
+    
+    this.ctx.strokeStyle =
+      this.mode === 'deleteStartLine' ? '#ff0000' : '#00ff88';
+    this.ctx.lineWidth = 4;
+    this.ctx.setLineDash([]);
+    this.ctx.beginPath();
+    // 체커 플래그의 사각형 외곽선 그리기
+    this.ctx.rect(-halfActualWidth, -thickness / 2, actualWidth, thickness);
+    this.ctx.stroke();
+    
+    this.ctx.restore();
+  }
+
+  // === 체커플래그 === (트랙 전체, 시작선 중심이 트랙 중심)
+  this.ctx.save();
+  this.ctx.translate(this.startLine.x, this.startLine.y);
+  this.ctx.rotate(this.startLine.angle + Math.PI / 2);
+
+  const startX = -halfActualWidth; // 중심에서 시작하여 양쪽으로 그리기
+  
+  // 2행으로 그리기
+  const rowHeight = thickness / 2;
+  
+  // 중심에서 양쪽으로 트랙 전체 폭 그리기
+  for (let row = 0; row < 2; row++) {
+    for (let i = 0; i < blockCount; i++) {
+      const x = startX + i * blockSize;
+      const y = -thickness / 2 + row * rowHeight;
+      // 행과 열의 합이 짝수면 검은색, 홀수면 흰색
+      const isBlack = (i + row) % 2 === 0;
+      this.ctx.fillStyle = isBlack ? '#000' : '#fff';
+      this.ctx.fillRect(x, y, blockSize, rowHeight);
+    }
+  }
+
+  this.ctx.restore();
+}
+
+        
+        // 출발 위치 그리기 (줌과 관계없이 고정된 크기)
+        this.spawnPositions.forEach((spawn, i) => {
+          const isSelected = i === this.selectedSpawnIndex;
+          const isHovered = i === this.hoveredSpawnIndex && (this.mode === 'deleteSpawn' || this.mode === 'moveSpawn');
+          const radius = 8; // 출발 위치 점 크기
+          
+          // 호버/선택 시 외곽 원
+          if (isSelected) {
+            // 선택 시 빨간색 외곽 원
+            this.ctx.fillStyle = '#ff0000';
+            this.ctx.beginPath();
+            this.ctx.arc(spawn.x, spawn.y, radius + 2, 0, Math.PI * 2);
+            this.ctx.fill();
+          } else if (isHovered && this.mode === 'moveSpawn') {
+            // 이동 모드에서 호버 시 초록색 외곽 원 (이동 가능 표시)
+            this.ctx.fillStyle = '#00ff88';
+            this.ctx.beginPath();
+            this.ctx.arc(spawn.x, spawn.y, radius + 2, 0, Math.PI * 2);
+            this.ctx.fill();
+          }
+          
+          // 출발 위치는 파란색으로 표시
+          this.ctx.fillStyle = isSelected ? '#00ff88' : (isHovered && this.mode === 'deleteSpawn' ? '#ff6666' : (isHovered && this.mode === 'moveSpawn' ? '#66ff88' : '#4a9eff'));
+          this.ctx.beginPath();
+          this.ctx.arc(spawn.x, spawn.y, radius, 0, Math.PI * 2);
+          this.ctx.fill();
+          
+          // 내부 원
+          this.ctx.fillStyle = isSelected ? '#000' : '#333';
+          this.ctx.beginPath();
+          this.ctx.arc(spawn.x, spawn.y, radius - 3, 0, Math.PI * 2);
+          this.ctx.fill();
+          
+          // 출발 방향 표시 (화살표)
+          const arrowLength = 20;
+          const arrowX = spawn.x + Math.cos(this.spawnAngle) * arrowLength;
+          const arrowY = spawn.y + Math.sin(this.spawnAngle) * arrowLength;
+          
+          this.ctx.strokeStyle = isSelected ? '#00ff88' : (isHovered && this.mode === 'deleteSpawn' ? '#ff6666' : (isHovered && this.mode === 'moveSpawn' ? '#66ff88' : '#4a9eff'));
+          this.ctx.lineWidth = 2;
+          this.ctx.beginPath();
+          this.ctx.moveTo(spawn.x, spawn.y);
+          this.ctx.lineTo(arrowX, arrowY);
+          this.ctx.stroke();
+          
+          // 화살표 머리
+          const arrowAngle1 = this.spawnAngle + Math.PI * 0.8;
+          const arrowAngle2 = this.spawnAngle - Math.PI * 0.8;
+          const arrowHeadSize = 6;
+          this.ctx.beginPath();
+          this.ctx.moveTo(arrowX, arrowY);
+          this.ctx.lineTo(
+            arrowX + Math.cos(arrowAngle1) * arrowHeadSize,
+            arrowY + Math.sin(arrowAngle1) * arrowHeadSize
+          );
+          this.ctx.moveTo(arrowX, arrowY);
+          this.ctx.lineTo(
+            arrowX + Math.cos(arrowAngle2) * arrowHeadSize,
+            arrowY + Math.sin(arrowAngle2) * arrowHeadSize
+          );
+          this.ctx.stroke();
+        });
+        
+        // 출발 위치 좌표 표시
+        this.spawnPositions.forEach((spawn, i) => {
+          if (i === this.selectedSpawnIndex) {
+            this.ctx.fillStyle = '#4a9eff';
+            this.ctx.font = `12px monospace`;
+            this.ctx.fillText(`출발${i + 1}: (${Math.round(spawn.x)}, ${Math.round(spawn.y)})`, spawn.x + 12, spawn.y - 12);
+          }
+        });
+        
         // 연석 정보 표시
         this.curbs.forEach((kerb, i) => {
           if (i === this.selectedKerbIndex) {
@@ -2672,362 +1694,27 @@
       }
 
       updateCodeOutput() {
-        const trackName = document.getElementById('trackName').value;
-        const trackId = document.getElementById('trackId').value;
-        const mapWidth = parseInt(document.getElementById('mapWidth').value) || 4500;
-        const mapHeight = parseInt(document.getElementById('mapHeight').value) || 3000;
-        const trackWidth = parseInt(document.getElementById('trackWidth').value) || 120;
-
-        if (this.points.length < 2) {
-          document.getElementById('codeOutput').value = '// 최소 2개의 포인트가 필요합니다.';
-          return;
-        }
-
-        const pointsStr = this.points.map(p => `{ x: ${p.x}, y: ${p.y}${p.type ? `, type: '${p.type}'` : ''} }`).join(',\n    ');
-
-        const code = `const ${trackId}Track = {
-  name: '${trackName}',
-  id: '${trackId}',
-  width: ${mapWidth},
-  height: ${mapHeight},
-  
-  centerPath: [
-    ${pointsStr}
-  ],
-  
-  trackWidth: ${trackWidth},
-  
-  checkpoints: [
-${this.checkpoints.length > 0 ? this.checkpoints.map(cp => `    { x: ${cp.x}, y: ${cp.y}, angle: ${cp.angle.toFixed(3)} }`).join(',\n') : '    // 체크포인트를 추가하세요'}
-  ],
-  
-  curbs: [
-${this.curbs.length > 0 ? this.curbs.map(kerb => {
-  if (kerb.centerPath && kerb.centerPath.length > 0) {
-    // 경로 기반 연석
-    const pathStr = kerb.centerPath.map(p => `{ x: ${p.x}, y: ${p.y} }`).join(', ');
-    return `    { centerPath: [${pathStr}], width: ${kerb.width || 20}, length: ${kerb.length || 300}, trackSide: '${kerb.trackSide || 'outer'}' }`;
-  } else {
-    // 구형 포맷
-    return `    { x: ${kerb.x}, y: ${kerb.y}, angle: ${(kerb.angle || 0).toFixed(3)}, width: ${kerb.width || 200}, height: ${kerb.height || 20} }`;
-  }
-}).join(',\n') : '    // 연석을 추가하세요'}
-  ],
-  
-  startLine: {
-    x: ${this.points[0]?.x || 0},
-    y: ${this.points[0]?.y || 0},
-    width: ${trackWidth},
-    angle: 0
-  },
-  
-  serverConfig: {
-    buildCenterPath: function() {
-      return [
-        ${pointsStr}
-      ];
-    },
-    
-    spawnPositions: [
-      { x: ${this.points[0]?.x || 0}, y: ${this.points[0]?.y || 0} }
-    ],
-    
-    spawnAngle: 0,
-    checkpoints: [
-${this.checkpoints.map(cp => `      { x: ${cp.x}, y: ${cp.y}, angle: ${cp.angle.toFixed(3)} }`).join(',\n')}
-    ],
-    startLine: {
-      x: ${this.points[0]?.x || 0},
-      y: ${this.points[0]?.y || 0},
-      angle: 0
-    },
-    trackWidth: ${trackWidth}
-  }
-};`;
-
-        document.getElementById('codeOutput').value = code;
+        window.TrackEditorCodeGenerator.updateCodeOutput(this);
       }
 
       copyCode() {
-        const code = document.getElementById('codeOutput').value;
-        navigator.clipboard.writeText(code).then(() => {
-          alert('코드가 클립보드에 복사되었습니다!');
-        });
+        window.TrackEditorCodeGenerator.copyCode();
       }
 
       newTrack() {
-        // 현재 작업이 있으면 확인
-        if (this.points.length > 0 || this.checkpoints.length > 0) {
-          if (!confirm('새 트랙을 만들면 현재 트랙 데이터가 모두 초기화됩니다.\n계속하시겠습니까?')) {
-            return;
-          }
-        }
-        
-        // 포인트 초기화
-        this.points = [];
-        this.selectedPointIndex = -1;
-        
-        // 체크포인트 초기화
-        this.checkpoints = [];
-        this.selectedCheckpointIndex = -1;
-        
-        // 트랙 정보 초기화
-        document.getElementById('trackName').value = '새 트랙';
-        document.getElementById('trackId').value = 'new-track';
-        document.getElementById('mapWidth').value = '4500';
-        document.getElementById('mapHeight').value = '3000';
-        
-        // 모드를 포인트 추가 모드로 변경
-        this.setMode('add');
-        
-        // 뷰 초기화
-        this.resetView();
-        
-        // UI 업데이트
-        this.updatePointList();
-        this.updateSelectedPointInfo();
-        this.updateCheckpointList();
-        this.updateSelectedCheckpointInfo();
-        this.updateKerbList();
-        this.updateSelectedKerbInfo();
-        this.updateCodeOutput();
-        this.saveToStorage(); // 저장
-        this.render();
-      }
-      
-      newTrack() {
-        // 현재 작업이 있으면 확인
-        if (this.points.length > 0 || this.checkpoints.length > 0 || this.curbs.length > 0 || document.getElementById('trackId').value !== 'new-track') {
-          if (!confirm('현재 작업 중인 트랙이 있습니다. 새 트랙을 만들면 모든 데이터가 초기화됩니다. 계속하시겠습니까?')) {
-            return;
-          }
-        }
-        
-        // 포인트 초기화
-        this.points = [];
-        this.selectedPointIndex = -1;
-        
-        // 체크포인트 초기화
-        this.checkpoints = [];
-        this.selectedCheckpointIndex = -1;
-        
-        // 연석 초기화
-        this.curbs = [];
-        this.selectedKerbIndex = -1;
-        
-        // 트랙 정보 초기화
-        document.getElementById('trackName').value = '새 트랙';
-        document.getElementById('trackId').value = 'new-track';
-        document.getElementById('mapWidth').value = '4500';
-        document.getElementById('mapHeight').value = '3000';
-        
-        // 모드를 포인트 추가 모드로 변경
-        this.setMode('add');
-        
-        // 뷰 초기화
-        this.resetView();
-        
-        // UI 업데이트
-        this.updatePointList();
-        this.updateSelectedPointInfo();
-        this.updateCheckpointList();
-        this.updateSelectedCheckpointInfo();
-        this.updateCodeOutput();
-        this.saveToStorage(); // 저장
-        this.render();
+        window.TrackEditorTrackManager.newTrack(this);
       }
       
       clearTrack() {
-        if (confirm('모든 트랙 데이터를 초기화하시겠습니까?\n(포인트, 체크포인트, 연석, 트랙 정보가 모두 초기화됩니다)')) {
-          // 포인트 초기화
-          this.points = [];
-          this.selectedPointIndex = -1;
-          
-          // 체크포인트 초기화
-          this.checkpoints = [];
-          this.selectedCheckpointIndex = -1;
-          
-          // 연석 초기화
-          this.curbs = [];
-          this.selectedKerbIndex = -1;
-          
-          // 트랙 정보 초기화
-          document.getElementById('trackName').value = '새 트랙';
-          document.getElementById('trackId').value = 'new-track';
-          document.getElementById('mapWidth').value = '4500';
-          document.getElementById('mapHeight').value = '3000';
-          
-          // 뷰 초기화
-          this.resetView();
-          
-          // UI 업데이트
-          this.updatePointList();
-          this.updateSelectedPointInfo();
-          this.updateCheckpointList();
-          this.updateSelectedCheckpointInfo();
-          this.updateKerbList();
-          this.updateSelectedKerbInfo();
-          this.updateCodeOutput();
-          this.saveToStorage(); // 저장
-          this.render();
-        }
+        window.TrackEditorTrackManager.clearTrack(this);
       }
 
       async loadTrack() {
-        const trackId = prompt('로드할 트랙 ID를 입력하세요 (basic-circuit 또는 monza):');
-        if (!trackId) return;
-
-        // 트랙 파일이 아직 로드되지 않았다면 로드 시도
-        if (typeof window.getTrack === 'undefined' || typeof window.TRACKS === 'undefined') {
-          const loadScript = (src) => {
-            return new Promise((resolve, reject) => {
-              // 이미 로드된 스크립트인지 확인
-              const existingScript = document.querySelector(`script[src="${src}"]`);
-              if (existingScript) {
-                resolve();
-                return;
-              }
-              
-              const script = document.createElement('script');
-              script.src = src;
-              script.onload = resolve;
-              script.onerror = reject;
-              document.body.appendChild(script);
-            });
-          };
-          
-          try {
-            await Promise.all([
-              loadScript('/js/track.js'),
-              loadScript('/js/tracks/basic-circuit.js'),
-              loadScript('/js/tracks/monza.js')
-            ]);
-            // 스크립트 로드 후 약간의 시간을 두어 registerTrack 호출 완료 대기
-            await new Promise(resolve => setTimeout(resolve, 200));
-          } catch (error) {
-            alert('트랙 파일 로드에 실패했습니다: ' + error);
-            return;
-          }
-        }
-
-        // 디버깅: TRACKS 상태 확인
-        console.log('TRACKS:', window.TRACKS);
-        console.log('getTrack 함수:', typeof window.getTrack);
-        
-        // 전역 getTrack 함수 사용 또는 직접 TRACKS에서 가져오기
-        let trackData = null;
-        if (typeof window.getTrack === 'function') {
-          trackData = window.getTrack(trackId);
-          console.log('getTrack 결과:', trackData);
-        }
-        
-        // getTrack이 실패했거나 null을 반환한 경우 직접 TRACKS에서 확인
-        if (!trackData && typeof window.TRACKS !== 'undefined') {
-          const trackInfo = window.TRACKS[trackId];
-          console.log('TRACKS에서 직접 가져오기:', trackInfo);
-          if (trackInfo) {
-            trackData = trackInfo.data;
-          }
-        }
-
-        if (!trackData) {
-          const availableTracks = typeof window.TRACKS !== 'undefined' 
-            ? Object.keys(window.TRACKS).join(', ') 
-            : '없음';
-          alert(`트랙 '${trackId}'를 찾을 수 없습니다.\n\n사용 가능한 트랙: ${availableTracks}\n\n트랙이 로드되지 않았을 수 있습니다. 콘솔을 확인하세요.`);
-          console.error('트랙 로드 실패:', {
-            trackId,
-            TRACKS: window.TRACKS,
-            getTrack: typeof window.getTrack,
-            trackData: trackData
-          });
-          return;
-        }
-
-        // 트랙 데이터를 편집기에 로드
-        let centerPath = trackData.centerPath;
-        
-        // centerPath가 함수인 경우 호출
-        if (typeof centerPath === 'function') {
-          centerPath = centerPath();
-        }
-        
-        if (centerPath && Array.isArray(centerPath) && centerPath.length > 0) {
-          this.points = centerPath.map(p => ({ 
-            x: p.x, 
-            y: p.y, 
-            type: p.type || 'straight' 
-          }));
-          
-          // 체크포인트 로드
-          if (trackData.checkpoints && Array.isArray(trackData.checkpoints)) {
-            this.checkpoints = trackData.checkpoints.map(cp => ({
-              x: cp.x,
-              y: cp.y,
-              angle: cp.angle || 0
-            }));
-          }
-          
-          // 연석 로드
-          if (trackData.curbs && Array.isArray(trackData.curbs)) {
-            this.curbs = trackData.curbs.map(kerb => ({
-              x: kerb.x,
-              y: kerb.y,
-              angle: kerb.angle || 0,
-              width: kerb.width || 200,
-              height: kerb.height || 20
-            }));
-          } else {
-            this.curbs = [];
-          }
-          
-          // 트랙 정보 업데이트
-          if (trackData.width) {
-            document.getElementById('mapWidth').value = trackData.width;
-          }
-          if (trackData.height) {
-            document.getElementById('mapHeight').value = trackData.height;
-          }
-          if (trackData.trackWidth) {
-            document.getElementById('trackWidth').value = trackData.trackWidth;
-          }
-          if (trackData.name) {
-            document.getElementById('trackName').value = trackData.name;
-          }
-          if (trackData.id) {
-            document.getElementById('trackId').value = trackData.id;
-          }
-          
-          this.selectedPointIndex = -1;
-          this.selectedCheckpointIndex = -1;
-          this.updatePointList();
-          this.updateSelectedPointInfo();
-          this.updateCheckpointList();
-          this.updateSelectedCheckpointInfo();
-          this.updateCodeOutput();
-          this.saveToStorage(); // 저장
-          this.render();
-          
-          alert(`트랙 '${trackData.name || trackId}'가 로드되었습니다. (${this.points.length}개 포인트, ${this.checkpoints.length}개 체크포인트)`);
-        } else {
-          alert('트랙 데이터 형식이 올바르지 않습니다. centerPath가 없습니다.');
-        }
+        await window.TrackEditorTrackManager.loadTrack(this);
       }
 
       updateStatus() {
-        const modeNames = { 
-          add: '포인트 추가', 
-          move: '포인트 이동', 
-          delete: '포인트 삭제',
-          addCheckpoint: '체크포인트 추가',
-          moveCheckpoint: '체크포인트 이동',
-          deleteCheckpoint: '체크포인트 삭제'
-        };
-        const statusEl = document.getElementById('status');
-        if (statusEl) {
-          const modeName = modeNames[this.mode] || this.mode;
-          statusEl.textContent = `모드: ${modeName} | 포인트: ${this.points.length}개 | 체크포인트: ${this.checkpoints.length}개`;
-        }
+        window.TrackEditorUIManager.updateStatus(this);
       }
     }
 
