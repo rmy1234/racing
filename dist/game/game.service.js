@@ -146,6 +146,73 @@ let GameService = class GameService {
             angle: defaultConfig.spawnAngle,
         };
     }
+    getSpeedSensitiveSteerAngle(targetSteer, speed) {
+        const speedKmh = Math.abs(speed);
+        let steerMultiplier;
+        if (speedKmh < 50) {
+            steerMultiplier = 1.0;
+        }
+        else if (speedKmh < 150) {
+            const ratio = (speedKmh - 50) / 100;
+            steerMultiplier = 1.0 - ratio * 0.3;
+        }
+        else if (speedKmh < 250) {
+            const ratio = (speedKmh - 150) / 100;
+            steerMultiplier = 0.7 - ratio * 0.3;
+        }
+        else {
+            const ratio = Math.min(1, (speedKmh - 250) / 50);
+            steerMultiplier = 0.4 - ratio * 0.2;
+        }
+        return targetSteer * steerMultiplier;
+    }
+    calculateSlipAngle(car) {
+        const carAngle = car.angle;
+        const velocityMagnitude = Math.sqrt(car.velocity.x * car.velocity.x +
+            car.velocity.y * car.velocity.y);
+        if (velocityMagnitude < 1) {
+            return 0;
+        }
+        const velocityAngle = Math.atan2(car.velocity.y, car.velocity.x);
+        let slipAngle = velocityAngle - carAngle;
+        while (slipAngle > Math.PI)
+            slipAngle -= 2 * Math.PI;
+        while (slipAngle < -Math.PI)
+            slipAngle += 2 * Math.PI;
+        return slipAngle;
+    }
+    getSlipGripMultiplier(slipAngle) {
+        const absSlip = Math.abs(slipAngle);
+        const slipDegrees = (absSlip * 180) / Math.PI;
+        if (slipDegrees < 5) {
+            return 1.0;
+        }
+        else if (slipDegrees < 15) {
+            const ratio = (slipDegrees - 5) / 10;
+            return 1.0 - ratio * 0.3;
+        }
+        else if (slipDegrees < 30) {
+            const ratio = (slipDegrees - 15) / 15;
+            return 0.7 - ratio * 0.2;
+        }
+        else {
+            return 0.5;
+        }
+    }
+    getSlipCondition(slipAngle, steerAngle) {
+        const absSlip = Math.abs(slipAngle);
+        const slipDegrees = (absSlip * 180) / Math.PI;
+        if (slipDegrees < 5) {
+            return 'none';
+        }
+        const isSlippingOutward = (slipAngle * steerAngle) > 0;
+        if (slipDegrees < 15) {
+            return isSlippingOutward ? 'understeer' : 'oversteer';
+        }
+        else {
+            return 'severe';
+        }
+    }
     leaveRoom(playerId) {
         const roomId = this.playerRooms.get(playerId);
         if (!roomId)
@@ -285,8 +352,7 @@ let GameService = class GameService {
             targetSteer = -this.MAX_STEER_ANGLE;
         else if (input.right && !input.left)
             targetSteer = this.MAX_STEER_ANGLE;
-        const speedRatio = Math.min(1, Math.abs(car.speed) / (this.MAX_SPEED * 0.7));
-        targetSteer *= 1.0 - speedRatio * 0.7;
+        targetSteer = this.getSpeedSensitiveSteerAngle(targetSteer, car.speed);
         const steerInertia = 1 / (1 + Math.abs(car.speed) * 0.020);
         const isReversingDirection = (car.steerAngle * targetSteer) < 0 && Math.abs(car.steerAngle) > 0.01;
         const isInputActive = input.left || input.right;
@@ -312,7 +378,10 @@ let GameService = class GameService {
         const downforce = speedAbs * speedAbs * this.DOWNFORCE_COEFF;
         const totalGrip = this.BASE_LATERAL_GRIP + downforce;
         const steeringStress = Math.abs(car.steerAngle) * speedAbs * 0.015;
-        const effectiveGrip = Math.max(0.3, totalGrip - steeringStress);
+        let effectiveGrip = Math.max(0.3, totalGrip - steeringStress);
+        const slipAngle = this.calculateSlipAngle(car);
+        const slipGripMultiplier = this.getSlipGripMultiplier(slipAngle);
+        effectiveGrip *= slipGripMultiplier;
         const gripFactor = Math.min(1, effectiveGrip * deltaTime);
         car.velocity.x += (targetVelX - car.velocity.x) * gripFactor;
         car.velocity.y += (targetVelY - car.velocity.y) * gripFactor;

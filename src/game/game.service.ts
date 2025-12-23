@@ -291,6 +291,134 @@ export class GameService {
     };
   }
 
+    // ========================================
+  // 1️⃣ 개선된 조향각 시스템
+  // ========================================
+  
+  /**
+   * 속도에 따른 조향각 제한 (실제 F1 데이터 기반)
+   * - 저속(0-50km/h): 100% 조향각 (헤어핀, 저속 코너)
+   * - 중속(50-150km/h): 70% 조향각 (중속 코너)
+   * - 고속(150-250km/h): 40% 조향각 (고속 스위퍼)
+   * - 초고속(250km/h+): 20% 조향각 (DRS 존, 긴 직선)
+   */
+  private getSpeedSensitiveSteerAngle(targetSteer: number, speed: number): number {
+    const speedKmh = Math.abs(speed);
+    
+    let steerMultiplier: number;
+    
+    if (speedKmh < 50) {
+      // 저속 구간: 전체 조향각 사용 가능
+      steerMultiplier = 1.0;
+    } else if (speedKmh < 150) {
+      // 중속 구간: 50km/h(1.0) → 150km/h(0.7) 선형 보간
+      const ratio = (speedKmh - 50) / 100;
+      steerMultiplier = 1.0 - ratio * 0.3;
+    } else if (speedKmh < 250) {
+      // 고속 구간: 150km/h(0.7) → 250km/h(0.4) 선형 보간
+      const ratio = (speedKmh - 150) / 100;
+      steerMultiplier = 0.7 - ratio * 0.3;
+    } else {
+      // 초고속 구간: 250km/h(0.4) → 300km/h(0.2) 선형 보간
+      const ratio = Math.min(1, (speedKmh - 250) / 50);
+      steerMultiplier = 0.4 - ratio * 0.2;
+    }
+    
+    return targetSteer * steerMultiplier;
+  }
+
+  // ========================================
+  // 2️⃣ 슬립 각도 (Slip Angle) 시스템
+  // ========================================
+  
+  /**
+   * 차량의 슬립 각도 계산
+   * - 차체가 향하는 방향 vs 실제 이동 방향의 차이
+   * - 언더스티어/오버스티어 감지에 사용
+   * @returns 슬립 각도 (라디안, -π ~ π)
+   */
+  private calculateSlipAngle(car: CarState): number {
+    // 차량이 바라보는 방향
+    const carAngle = car.angle;
+    
+    // 실제 속도 벡터가 향하는 방향
+    const velocityMagnitude = Math.sqrt(
+      car.velocity.x * car.velocity.x + 
+      car.velocity.y * car.velocity.y
+    );
+    
+    // 속도가 너무 작으면 슬립 각도 계산 불가 (정지 상태)
+    if (velocityMagnitude < 1) {
+      return 0;
+    }
+    
+    const velocityAngle = Math.atan2(car.velocity.y, car.velocity.x);
+    
+    // 슬립 각도 = 이동 방향 - 차체 방향
+    let slipAngle = velocityAngle - carAngle;
+    
+    // -π ~ π 범위로 정규화
+    while (slipAngle > Math.PI) slipAngle -= 2 * Math.PI;
+    while (slipAngle < -Math.PI) slipAngle += 2 * Math.PI;
+    
+    return slipAngle;
+  }
+  
+  /**
+   * 슬립 각도에 따른 그립 페널티 계산
+   * - 최적 슬립 각도(0-5도): 100% 그립
+   * - 중간 슬립(5-15도): 70-100% 그립 (타이어가 미끄러지기 시작)
+   * - 심각한 슬립(15도+): 50% 그립 (심각한 언더/오버스티어)
+   * @returns 그립 배율 (0.5 ~ 1.0)
+   */
+  private getSlipGripMultiplier(slipAngle: number): number {
+    const absSlip = Math.abs(slipAngle);
+    
+    // 각도를 도(degree)로 변환하여 이해하기 쉽게
+    const slipDegrees = (absSlip * 180) / Math.PI;
+    
+    if (slipDegrees < 5) {
+      // 0-5도: 최적 슬립 각도 - 100% 그립
+      return 1.0;
+    } else if (slipDegrees < 15) {
+      // 5-15도: 타이어 한계 접근 - 선형으로 그립 감소
+      const ratio = (slipDegrees - 5) / 10;
+      return 1.0 - ratio * 0.3; // 100% → 70%
+    } else if (slipDegrees < 30) {
+      // 15-30도: 심각한 슬립 - 급격한 그립 손실
+      const ratio = (slipDegrees - 15) / 15;
+      return 0.7 - ratio * 0.2; // 70% → 50%
+    } else {
+      // 30도+: 거의 스핀 상태 - 최소 그립
+      return 0.5;
+    }
+  }
+  
+  /**
+   * 슬립 각도 기반 카운터스티어 힌트 제공 (선택적)
+   * - 클라이언트에 슬립 상태를 전달하여 UI 표시 가능
+   * @returns 'none' | 'understeer' | 'oversteer' | 'severe'
+   */
+  private getSlipCondition(slipAngle: number, steerAngle: number): string {
+    const absSlip = Math.abs(slipAngle);
+    const slipDegrees = (absSlip * 180) / Math.PI;
+    
+    if (slipDegrees < 5) {
+      return 'none'; // 정상 주행
+    }
+    
+    // 슬립 방향과 조향 방향 비교
+    const isSlippingOutward = (slipAngle * steerAngle) > 0;
+    
+    if (slipDegrees < 15) {
+      // 가벼운 슬립
+      return isSlippingOutward ? 'understeer' : 'oversteer';
+    } else {
+      // 심각한 슬립
+      return 'severe';
+    }
+  }
+
   leaveRoom(playerId: string): { room: GameRoom | null; wasHost: boolean } {
     const roomId = this.playerRooms.get(playerId);
     if (!roomId) return { room: null, wasHost: false };
@@ -419,6 +547,10 @@ export class GameService {
     return results ? { results } : null;
   }
 
+  // ========================================
+  // 3️⃣ 개선된 updateCarPhysics (기존 메서드 대체)
+  // ========================================
+  
   private updateCarPhysics(
     room: GameRoom,
     car: CarState,
@@ -431,10 +563,9 @@ export class GameService {
     const maxForwardSpeed = onTrack ? this.MAX_SPEED : this.MAX_SPEED_OFF_TRACK;
   
     // =========================
-    // 1️⃣ 속도 입력 처리 (F1 구간별 가속도)
+    // 1️⃣ 속도 입력 처리 (기존과 동일)
     // =========================
     if (input.up) {
-      // 현재 속도에 따라 가속도 선택
       const accel = onTrack 
         ? this.getAcceleration(car.speed)
         : this.ACCELERATION_OFF_TRACK;
@@ -445,7 +576,6 @@ export class GameService {
       if (car.speed > 5) {
         car.speed -= this.BRAKE_POWER * deltaTime;
       } else {
-        // 후진 시 기본 가속도 사용
         const reverseAccel = onTrack 
           ? this.ACCEL_LOW 
           : this.ACCELERATION_OFF_TRACK;
@@ -461,10 +591,7 @@ export class GameService {
       }
     }
   
-    // =========================
     // 트랙 밖 감속 처리
-    // =========================
-    // 트랙 밖에 있고 현재 속도가 최대 속도(80km/h)보다 크면 천천히 감속
     if (!onTrack && car.speed > this.MAX_SPEED_OFF_TRACK) {
       car.speed = Math.max(
         this.MAX_SPEED_OFF_TRACK,
@@ -472,48 +599,35 @@ export class GameService {
       );
     }
   
-    // 최대 속도 제한 (트랙 위에서는 300km/h, 트랙 밖에서는 80km/h)
     car.speed = Math.min(car.speed, maxForwardSpeed);
     car.speed = Math.max(car.speed, -this.MAX_REVERSE_SPEED);
   
     // =========================
-    // 2️⃣ 조향각 계산 (F1 스티어링 시스템)
+    // 2️⃣ 🆕 개선된 조향각 계산
     // =========================
     
     // 입력에 따른 목표 조향각 설정
     let targetSteer = 0;
     if (input.left && !input.right) targetSteer = -this.MAX_STEER_ANGLE;
     else if (input.right && !input.left) targetSteer = this.MAX_STEER_ANGLE;
-  
-    // 속도에 따른 조향각 감쇠 (고속일수록 조향각 제한)
-    // - 실제 F1: 고속에서는 조향각을 줄여야 안정적
-    // - 저속(0km/h): 100% 조향각 사용
-    // - 고속(210km/h+): 30% 조향각만 사용
-    const speedRatio = Math.min(1, Math.abs(car.speed) / (this.MAX_SPEED * 0.7));
-    targetSteer *= 1.0 - speedRatio * 0.7;
+
+    // 🆕 속도 기반 조향각 제한 적용 (실제 F1 특성)
+    targetSteer = this.getSpeedSensitiveSteerAngle(targetSteer, car.speed);
 
     // 조향각 부드럽게 적용 (핸들의 관성/무게감)
-    // - steerInertia: 속도가 빠를수록 핸들이 무겁게 느껴지는 효과
-    // - 실제 F1: 고속에서 핸들을 급하게 돌리기 어려움 (안전성)
-    // - 저속에서는 빠른 반응, 고속에서는 무거운 핸들감 유지
     const steerInertia = 1 / (1 + Math.abs(car.speed) * 0.020);
     
-    // 조향각이 반대 방향으로 바뀔 때 감지
-    // - 현재 조향각과 목표 조향각의 부호가 다르면 반대 방향 전환
+    // 조향각 반대 방향 전환 감지
     const isReversingDirection = (car.steerAngle * targetSteer) < 0 && Math.abs(car.steerAngle) > 0.01;
     
-    // 실제 조향각 업데이트 (부드러운 보간)
-    // - 입력이 있을 때: STEERING_RESPONSE_SPEED 사용 (무거운 핸들)
-    // - 입력이 없을 때: STEERING_CENTERING_SPEED 사용 (빠른 센터링)
-    // - 반대 방향 전환 시: 더 빠른 반응 속도 사용 (1.5배)
+    // 실제 조향각 업데이트
     const isInputActive = input.left || input.right;
     let steeringSpeed = isInputActive 
       ? this.STEERING_RESPONSE_SPEED 
       : this.STEERING_CENTERING_SPEED;
     
-    // 반대 방향으로 바뀔 때 더 빠른 반응
     if (isReversingDirection && isInputActive) {
-      steeringSpeed *= 3.5; // 반대 방향 전환 시 3.5배 빠르게
+      steeringSpeed *= 3.5;
     }
     
     car.steerAngle +=
@@ -521,85 +635,66 @@ export class GameService {
       Math.min(1, steeringSpeed * steerInertia * deltaTime);
 
     // =========================
-    // 3️⃣ 실제 차량 물리: 자전거 모델 (Bicycle Model)
+    // 3️⃣ 자전거 모델 물리 (기존과 동일)
     // =========================
-    // km/h → m/s → pixels/s 변환
     const speedMps = car.speed / 3.6;
     const pixelsPerSecond = speedMps * this.PIXELS_PER_METER;
   
-    // 앞바퀴가 실제로 향하는 방향
-    // - 차체 각도(car.angle)에 조향각(car.steerAngle)을 더한 방향
-    // - 예: 차가 북쪽(0°)을 향하고 핸들을 왼쪽(-30°)으로 돌리면 
-    //       앞바퀴는 북서쪽(-30°)을 향함
     const frontWheelAngle = car.angle + car.steerAngle;
     
-    // 앞바퀴가 향하는 방향의 속도 벡터
     const frontVelX = pixelsPerSecond * Math.cos(frontWheelAngle);
     const frontVelY = pixelsPerSecond * Math.sin(frontWheelAngle);
     
-    // 뒷바퀴는 차체 방향으로만 이동 (타이어 그립 때문에 횡방향 슬립 거의 없음)
     const rearVelX = pixelsPerSecond * Math.cos(car.angle);
     const rearVelY = pixelsPerSecond * Math.sin(car.angle);
     
-    // 차량 중심의 목표 속도 (앞뒤 바퀴의 기하학적 평균)
-    // - 실제 차량: 앞바퀴가 가고 싶은 곳 + 뒷바퀴가 갈 수 있는 곳의 절충
     const targetVelX = (frontVelX + rearVelX) / 2;
     const targetVelY = (frontVelY + rearVelY) / 2;
     
     // =========================
-    // 4️⃣ F1 타이어 그립 & 에어로 다운포스
+    // 4️⃣ 🆕 슬립 각도 기반 그립 계산
     // =========================
     const speedAbs = Math.abs(pixelsPerSecond);
 
-    // 다운포스 계산 (속도의 제곱에 비례)
-    // - 실제 F1: 고속 코너(200km/h+)에서 차체가 지면에 강하게 눌림
-    // - 저속(50km/h): 거의 다운포스 없음 → 기본 그립만 사용
-    // - 고속(150km/h): 강력한 다운포스 → 횡방향 그립 대폭 증가
+    // 기본 다운포스 계산
     const downforce = speedAbs * speedAbs * this.DOWNFORCE_COEFF;
-
-    // 총 그립 = 기본 타이어 그립 + 속도 의존 다운포스
     const totalGrip = this.BASE_LATERAL_GRIP + downforce;
 
-    // [ADD] 고속 상태에서 조향각이 클 경우 그립 손실 (언더스티어)
-    // - 실제 F1: 속도를 줄이지 않으면 차가 바깥으로 밀려남
+    // 고속 조향 스트레스 (언더스티어)
     const steeringStress = Math.abs(car.steerAngle) * speedAbs * 0.015;
-    const effectiveGrip = Math.max(0.3, totalGrip - steeringStress);
+    let effectiveGrip = Math.max(0.3, totalGrip - steeringStress);
 
-    // 그립을 이용해 목표 속도로 수렴 (미끄러짐 제어)
-    // - gripFactor가 클수록 차가 빠르게 목표 방향으로 정렬
-    // - gripFactor가 작으면 미끄러지는 느낌 (드리프트)
+    // 🆕 슬립 각도 기반 그립 손실 추가
+    const slipAngle = this.calculateSlipAngle(car);
+    const slipGripMultiplier = this.getSlipGripMultiplier(slipAngle);
+    
+    // 최종 그립 = 기본 그립 × 슬립 페널티
+    effectiveGrip *= slipGripMultiplier;
+
+    // 🆕 (선택적) 슬립 상태를 car에 저장 (UI/디버깅용)
+    // car.slipAngle = slipAngle;
+    // car.slipCondition = this.getSlipCondition(slipAngle, car.steerAngle);
+
+    // 그립을 이용해 목표 속도로 수렴
     const gripFactor = Math.min(1, effectiveGrip * deltaTime);
 
     car.velocity.x += (targetVelX - car.velocity.x) * gripFactor;
     car.velocity.y += (targetVelY - car.velocity.y) * gripFactor;
-
   
     // =========================
-    // 5️⃣ 차체 회전 (자전거 모델 운동학)
+    // 5️⃣ 차체 회전 (기존과 동일)
     // =========================
-    // 📐 자전거 모델 공식: ω = (v / L) × tan(δ)
-    //   - ω: 차체 각속도 (rad/s)
-    //   - v: 차량 속도
-    //   - L: 휠베이스
-    //   - δ: 앞바퀴 조향각
-    // 
-    // 실제 F1: 고속에서 급회전이 안 되는 이유는 
-    // "조향각 제한"과 "그립 손실"로 구현 (위에서 이미 처리)
-    // 자전거 모델 자체는 물리적으로 정확하므로 그대로 유지
     let angularVelocity = 0;
     if (Math.abs(car.steerAngle) > 0.0001 && Math.abs(pixelsPerSecond) > 0.1) {
       const wheelBasePixels = this.WHEEL_BASE_METERS * this.PIXELS_PER_METER;
-      
-      // 표준 자전거 모델 공식 (tan 사용)
       angularVelocity = (pixelsPerSecond / wheelBasePixels) * Math.tan(car.steerAngle);
     }
     
-    // 차체 각도 적용 (차가 실제로 회전)
     car.angle += angularVelocity * deltaTime;
-    car.angularVelocity = angularVelocity; // 디버깅/UI용 상태 저장
+    car.angularVelocity = angularVelocity;
   
     // =========================
-    // 6️⃣ 위치 업데이트
+    // 6️⃣ 위치 업데이트 (기존과 동일)
     // =========================
     car.position.x += car.velocity.x * deltaTime;
     car.position.y += car.velocity.y * deltaTime;
@@ -607,16 +702,15 @@ export class GameService {
     if (Math.abs(car.speed) < 0.1) car.speed = 0;
   
     // =========================
-    // 8️⃣ 체크포인트 & 랩
+    // 7️⃣ 체크포인트 & 랩 (기존과 동일)
     // =========================
     const checkpoints = this.getCheckpoints(room.trackName);
     this.updateCheckpointProgress(car, checkpoints, room.trackName);
   
     const crossDir = this.checkStartLineCross(prevPosition, car.position, room.trackName);
-    // 모든 체크포인트를 통과한 상태에서 스타트 라인을 정방향으로 통과하면 랩 완료
     if (crossDir === 'forward' && car.checkpoint >= checkpoints.length - 1) {
       car.lap += 1;
-      car.checkpoint = -1; // 다음 랩을 위해 체크포인트 초기화
+      car.checkpoint = -1;
   
       if (!car.retired && room.startTime != null && car.lap >= room.totalLaps) {
         car.finished = true;
@@ -624,6 +718,7 @@ export class GameService {
       }
     }
   }
+
   
 
   // 체크포인트를 올바른 순서로 통과했는지 진행도 업데이트

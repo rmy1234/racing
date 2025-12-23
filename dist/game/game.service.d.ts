@@ -67,6 +67,10 @@ export declare class GameService {
     joinRoom(roomId: string, playerId: string, nickname: string, carSkin?: string | null): GameRoom | null;
     private addPlayerToRoom;
     private getSpawnPositions;
+    private getSpeedSensitiveSteerAngle;
+    private calculateSlipAngle;
+    private getSlipGripMultiplier;
+    private getSlipCondition;
     leaveRoom(playerId: string): {
         room: GameRoom | null;
         wasHost: boolean;
