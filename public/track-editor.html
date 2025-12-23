@@ -464,7 +464,7 @@
     // 시작선 찾기 (트랙 전체를 가로지르는 시작선)
     findStartLineAt(x, y, threshold = 30) {
         const trackWidth = parseInt(document.getElementById('trackWidth')?.value || '120') || 120;
-        return window.TrackEditorUtils.findStartLineAt(x, y, this.startLine, trackWidth, threshold);
+        return window.TrackEditorUtils.findStartLineAt(x, y, this.startLine, trackWidth, threshold, this.points);
     }
 
       

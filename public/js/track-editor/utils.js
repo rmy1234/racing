@@ -47,18 +47,21 @@ TrackEditorUtils.findPointAt = function(x, y, points, radius = 10) {
   return -1;
 }
 
-// 트랙 중심선에 가장 가까운 점 찾기 (스냅용)
+// 트랙 중심선에 가장 가까운 점 찾기 (스냅용) - 곡선 경로 고려
 TrackEditorUtils.snapToTrackCenter = function(x, y, points) {
   if (points.length < 2) return { x, y };
   
+  // 부드러운 경로 생성 (곡선 고려)
+  const smoothPath = TrackEditorUtils.getSmoothPath(points, 200);
+  if (smoothPath.length < 2) return { x, y };
+  
   let minDist = Infinity;
   let nearestPoint = { x, y };
-  let nearestIndex = 0;
   
-  // 모든 선분에 대해 가장 가까운 점 찾기
-  for (let i = 0; i < points.length; i++) {
-    const p1 = points[i];
-    const p2 = points[(i + 1) % points.length];
+  // 부드러운 경로의 모든 선분에 대해 가장 가까운 점 찾기
+  for (let i = 0; i < smoothPath.length; i++) {
+    const p1 = smoothPath[i];
+    const p2 = smoothPath[(i + 1) % smoothPath.length];
     
     // 선분에 투영된 점 찾기
     const dx = p2.x - p1.x;
@@ -71,7 +74,6 @@ TrackEditorUtils.snapToTrackCenter = function(x, y, points) {
       if (dist < minDist) {
         minDist = dist;
         nearestPoint = { x: p1.x, y: p1.y };
-        nearestIndex = i;
       }
     } else {
       // 선분에 투영
@@ -83,7 +85,6 @@ TrackEditorUtils.snapToTrackCenter = function(x, y, points) {
       if (dist < minDist) {
         minDist = dist;
         nearestPoint = { x: projX, y: projY };
-        nearestIndex = i;
       }
     }
   }
@@ -91,15 +92,19 @@ TrackEditorUtils.snapToTrackCenter = function(x, y, points) {
   return nearestPoint;
 }
 
-// 체크포인트 각도 계산 (가장 가까운 트랙 포인트의 방향)
+// 체크포인트 각도 계산 (가장 가까운 트랙 포인트의 접선 방향) - 곡선 경로 고려
 TrackEditorUtils.calculateCheckpointAngle = function(x, y, points) {
   if (points.length < 2) return 0;
   
-  // 가장 가까운 포인트 찾기
+  // 부드러운 경로 생성 (곡선 고려)
+  const smoothPath = TrackEditorUtils.getSmoothPath(points, 200);
+  if (smoothPath.length < 2) return 0;
+  
+  // 부드러운 경로에서 가장 가까운 점 찾기
   let minDist = Infinity;
   let nearestIndex = 0;
-  for (let i = 0; i < points.length; i++) {
-    const p = points[i];
+  for (let i = 0; i < smoothPath.length; i++) {
+    const p = smoothPath[i];
     const dx = x - p.x;
     const dy = y - p.y;
     const dist = Math.sqrt(dx * dx + dy * dy);
@@ -109,9 +114,14 @@ TrackEditorUtils.calculateCheckpointAngle = function(x, y, points) {
     }
   }
   
-  // 다음 포인트 방향 계산
-  const p1 = points[nearestIndex];
-  const p2 = points[(nearestIndex + 1) % points.length];
+  // 곡선 경로의 접선 방향 계산 (이전 점과 다음 점을 사용하여 더 정확한 방향 계산)
+  const prevIndex = (nearestIndex - 1 + smoothPath.length) % smoothPath.length;
+  const nextIndex = (nearestIndex + 1) % smoothPath.length;
+  
+  const p1 = smoothPath[prevIndex];
+  const p2 = smoothPath[nextIndex];
+  
+  // 이전 점과 다음 점의 중간 방향을 사용 (더 부드러운 접선 방향)
   const dx = p2.x - p1.x;
   const dy = p2.y - p1.y;
   return Math.atan2(dy, dx);
@@ -143,8 +153,8 @@ TrackEditorUtils.findSpawnAt = function(x, y, spawnPositions, radius = 15) {
   return -1;
 }
 
-// 시작선 찾기 (트랙 전체를 가로지르는 시작선)
-TrackEditorUtils.findStartLineAt = function(x, y, startLine, trackWidth, threshold = 30) {
+// 시작선 찾기 (트랙 전체를 가로지르는 시작선) - 곡선 경로 고려
+TrackEditorUtils.findStartLineAt = function(x, y, startLine, trackWidth, threshold = 30, points = null) {
   if (!startLine || (startLine.x === 0 && startLine.y === 0)) {
     return false;
   }
@@ -160,8 +170,36 @@ TrackEditorUtils.findStartLineAt = function(x, y, startLine, trackWidth, thresho
 
   const halfTrackWidth = trackWidth / 2;
 
-  // 시작선은 트랙 진행방향에 수직
-  const perpAngle = startLine.angle + Math.PI / 2;
+  // startLine.angle은 트랙의 진행 방향(접선)입니다.
+  // 시작선은 트랙 진행 방향에 수직이므로, 시작선 방향은 startLine.angle + Math.PI / 2
+  // 하지만 곡선 경로를 고려하여 더 정확한 접선 방향을 계산
+  let tangentAngle = startLine.angle;
+  
+  if (points && points.length >= 2) {
+    // 부드러운 경로에서 시작선 위치와 가장 가까운 점 찾기
+    const smoothPath = TrackEditorUtils.getSmoothPath(points, 200);
+    let minDist = Infinity;
+    let nearestIndex = 0;
+    
+    for (let i = 0; i < smoothPath.length; i++) {
+      const p = smoothPath[i];
+      const d = Math.sqrt((startLine.x - p.x) ** 2 + (startLine.y - p.y) ** 2);
+      if (d < minDist) {
+        minDist = d;
+        nearestIndex = i;
+      }
+    }
+    
+    // 곡선 경로의 접선 방향 계산
+    const prevIndex = (nearestIndex - 1 + smoothPath.length) % smoothPath.length;
+    const nextIndex = (nearestIndex + 1) % smoothPath.length;
+    const p1 = smoothPath[prevIndex];
+    const p2 = smoothPath[nextIndex];
+    tangentAngle = Math.atan2(p2.y - p1.y, p2.x - p1.x);
+  }
+
+  // 시작선은 트랙 진행방향에 수직이므로, 시작선의 방향은 접선 + Math.PI / 2
+  const perpAngle = tangentAngle + Math.PI / 2;
   const lineX = Math.cos(perpAngle);
   const lineY = Math.sin(perpAngle);
 
