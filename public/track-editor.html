@@ -253,8 +253,10 @@
         this.selectedSpawnIndex = -1; // 선택된 출발 위치 인덱스
         this.draggingPointIndex = -1;
         this.draggingCheckpointIndex = -1; // 드래그 중인 체크포인트 인덱스
+        this.draggingCheckpointAngleIndex = -1; // 드래그 중인 체크포인트 화살표 인덱스
         this.draggingKerbIndex = -1; // 드래그 중인 연석 인덱스
         this.draggingSpawnIndex = -1; // 드래그 중인 출발 위치 인덱스
+        this.draggingSpawnAngleIndex = -1; // 드래그 중인 출발 위치 화살표 인덱스
         this.draggingStartLine = false; // 드래그 중인 시작선
         this.hoveredPointIndex = -1; // 호버 중인 포인트 인덱스
         this.hoveredCheckpointIndex = -1; // 호버 중인 체크포인트 인덱스
@@ -427,6 +429,38 @@
         return window.TrackEditorUtils.findSpawnAt(x, y, this.spawnPositions, radius);
       }
       
+      // 체크포인트 화살표 끝 부분 찾기
+      findCheckpointArrowAt(x, y, radius = 10) {
+        for (let i = this.checkpoints.length - 1; i >= 0; i--) {
+          const cp = this.checkpoints[i];
+          const arrowLength = 20;
+          const arrowX = cp.x + Math.cos(cp.angle) * arrowLength;
+          const arrowY = cp.y + Math.sin(cp.angle) * arrowLength;
+          const dx = x - arrowX;
+          const dy = y - arrowY;
+          if (dx * dx + dy * dy < radius * radius) {
+            return i;
+          }
+        }
+        return -1;
+      }
+      
+      // 출발 위치 화살표 끝 부분 찾기
+      findSpawnArrowAt(x, y, radius = 10) {
+        for (let i = this.spawnPositions.length - 1; i >= 0; i--) {
+          const spawn = this.spawnPositions[i];
+          const arrowLength = 20;
+          const arrowX = spawn.x + Math.cos(this.spawnAngle) * arrowLength;
+          const arrowY = spawn.y + Math.sin(this.spawnAngle) * arrowLength;
+          const dx = x - arrowX;
+          const dy = y - arrowY;
+          if (dx * dx + dy * dy < radius * radius) {
+            return i;
+          }
+        }
+        return -1;
+      }
+      
     // 시작선 찾기 (트랙 전체를 가로지르는 시작선)
     findStartLineAt(x, y, threshold = 30) {
         const trackWidth = parseInt(document.getElementById('trackWidth')?.value || '120') || 120;
@@ -532,7 +566,23 @@
           return;
         }
         
-        const point = this.getCanvasPoint(e);
+        const point = this.getCanvasPoint(e, false); // 화살표 드래그는 부드러운 이동을 위해 반올림하지 않음
+        
+        // 화살표 드래그 감지 (체크포인트나 출발 위치가 선택된 상태에서 화살표 끝 부분 클릭)
+        if (this.selectedCheckpointIndex >= 0) {
+          const arrowIndex = this.findCheckpointArrowAt(point.x, point.y);
+          if (arrowIndex >= 0 && arrowIndex === this.selectedCheckpointIndex) {
+            this.draggingCheckpointAngleIndex = arrowIndex;
+            return; // 화살표 드래그 시작
+          }
+        }
+        if (this.selectedSpawnIndex >= 0) {
+          const arrowIndex = this.findSpawnArrowAt(point.x, point.y);
+          if (arrowIndex >= 0 && arrowIndex === this.selectedSpawnIndex) {
+            this.draggingSpawnAngleIndex = arrowIndex;
+            return; // 화살표 드래그 시작
+          }
+        }
         
         if (this.mode === 'move') {
           this.draggingPointIndex = this.findPointAt(point.x, point.y);
@@ -625,6 +675,15 @@
             this.render();
           }
         } else if (this.mode === 'deleteCheckpoint' || this.mode === 'moveCheckpoint') {
+          // 먼저 화살표 감지 (선택된 체크포인트가 있을 때)
+          if (this.selectedCheckpointIndex >= 0) {
+            const arrowIndex = this.findCheckpointArrowAt(point.x, point.y);
+            if (arrowIndex >= 0 && arrowIndex === this.selectedCheckpointIndex) {
+              this.canvas.style.cursor = 'grab';
+              return; // 화살표 위에 있으면 체크포인트 감지하지 않음
+            }
+          }
+          
           const checkpointIndex = this.findCheckpointAt(point.x, point.y);
           if (checkpointIndex >= 0) {
             if (this.hoveredCheckpointIndex !== checkpointIndex) {
@@ -655,6 +714,15 @@
             this.render();
           }
         } else if (this.mode === 'deleteSpawn' || this.mode === 'moveSpawn') {
+          // 먼저 화살표 감지 (선택된 출발 위치가 있을 때)
+          if (this.selectedSpawnIndex >= 0) {
+            const arrowIndex = this.findSpawnArrowAt(point.x, point.y);
+            if (arrowIndex >= 0 && arrowIndex === this.selectedSpawnIndex) {
+              this.canvas.style.cursor = 'grab';
+              return; // 화살표 위에 있으면 출발 위치 감지하지 않음
+            }
+          }
+          
           const spawnIndex = this.findSpawnAt(point.x, point.y);
           if (spawnIndex >= 0) {
             if (this.hoveredSpawnIndex !== spawnIndex) {
@@ -678,7 +746,23 @@
             this.render();
           }
         } else {
-          // 다른 모드일 때 호버 상태 초기화
+          // 다른 모드일 때도 선택된 체크포인트나 출발 위치의 화살표 드래그 가능
+          if (this.selectedCheckpointIndex >= 0) {
+            const arrowIndex = this.findCheckpointArrowAt(point.x, point.y);
+            if (arrowIndex >= 0 && arrowIndex === this.selectedCheckpointIndex) {
+              this.canvas.style.cursor = 'grab';
+              return;
+            }
+          }
+          if (this.selectedSpawnIndex >= 0) {
+            const arrowIndex = this.findSpawnArrowAt(point.x, point.y);
+            if (arrowIndex >= 0 && arrowIndex === this.selectedSpawnIndex) {
+              this.canvas.style.cursor = 'grab';
+              return;
+            }
+          }
+          
+          // 호버 상태 초기화
           if (this.hoveredPointIndex >= 0 || this.hoveredCheckpointIndex >= 0 || this.hoveredKerbIndex >= 0 || this.hoveredSpawnIndex >= 0 || this.hoveredStartLine) {
             this.hoveredPointIndex = -1;
             this.hoveredCheckpointIndex = -1;
@@ -706,6 +790,28 @@
           this.updateSelectedPointInfo();
           this.updateCodeOutput();
           this.saveToStorage(); // 저장
+          this.render();
+        } else if (this.draggingCheckpointAngleIndex >= 0) {
+          // 체크포인트 화살표 드래그 - 각도 변경
+          const point = this.getCanvasPoint(e, false);
+          const cp = this.checkpoints[this.draggingCheckpointAngleIndex];
+          const angle = Math.atan2(point.y - cp.y, point.x - cp.x);
+          this.checkpoints[this.draggingCheckpointAngleIndex].angle = angle;
+          this.updateSelectedCheckpointInfo();
+          this.updateCheckpointList();
+          this.canvas.style.cursor = 'grabbing';
+          this.render();
+        } else if (this.draggingSpawnAngleIndex >= 0) {
+          // 출발 위치 화살표 드래그 - 각도 변경
+          const point = this.getCanvasPoint(e, false);
+          const spawn = this.spawnPositions[this.draggingSpawnAngleIndex];
+          const angle = Math.atan2(point.y - spawn.y, point.x - spawn.x);
+          this.spawnAngle = angle;
+          if (document.getElementById('spawnAngle')) document.getElementById('spawnAngle').value = angle.toFixed(3);
+          if (document.getElementById('spawnAngleDeg')) document.getElementById('spawnAngleDeg').value = Math.round(angle * 180 / Math.PI);
+          this.updateSelectedSpawnInfo();
+          this.updateSpawnList();
+          this.canvas.style.cursor = 'grabbing';
           this.render();
         } else if (this.draggingCheckpointIndex >= 0 && this.mode === 'moveCheckpoint') {
           const point = this.getCanvasPoint(e);
@@ -784,6 +890,22 @@
         
         if (this.draggingPointIndex >= 0) {
           this.draggingPointIndex = -1;
+        }
+        
+        if (this.draggingCheckpointAngleIndex >= 0) {
+          // 체크포인트 화살표 드래그 종료
+          this.updateCodeOutput();
+          this.saveToStorage();
+          this.draggingCheckpointAngleIndex = -1;
+          this.canvas.style.cursor = 'default';
+        }
+        
+        if (this.draggingSpawnAngleIndex >= 0) {
+          // 출발 위치 화살표 드래그 종료
+          this.updateCodeOutput();
+          this.saveToStorage();
+          this.draggingSpawnAngleIndex = -1;
+          this.canvas.style.cursor = 'default';
         }
         
         if (this.draggingCheckpointIndex >= 0) {
@@ -1589,15 +1711,15 @@ if (this.startLine && (this.startLine.x !== 0 || this.startLine.y !== 0)) {
 }
 
         
-        // 출발 위치 그리기 (줌과 관계없이 고정된 크기)
+        // 출발 위치 그리기 (줌과 관계없이 고정된 크기) - 체크포인트와 동일한 스타일
         this.spawnPositions.forEach((spawn, i) => {
           const isSelected = i === this.selectedSpawnIndex;
           const isHovered = i === this.hoveredSpawnIndex && (this.mode === 'deleteSpawn' || this.mode === 'moveSpawn');
-          const radius = 8; // 출발 위치 점 크기
+          const radius = isSelected ? 12 : (isHovered ? 14 : 10); // 체크포인트와 동일한 크기
           
-          // 호버/선택 시 외곽 원
-          if (isSelected) {
-            // 선택 시 빨간색 외곽 원
+          // 삭제 모드에서 호버 시 빨간색 강조
+          if (isHovered && this.mode === 'deleteSpawn') {
+            // 빨간색 외곽 원 (삭제 가능 표시)
             this.ctx.fillStyle = '#ff0000';
             this.ctx.beginPath();
             this.ctx.arc(spawn.x, spawn.y, radius + 2, 0, Math.PI * 2);
@@ -1616,7 +1738,7 @@ if (this.startLine && (this.startLine.x !== 0 || this.startLine.y !== 0)) {
           this.ctx.arc(spawn.x, spawn.y, radius, 0, Math.PI * 2);
           this.ctx.fill();
           
-          // 내부 원
+          // 내부 원 (체크포인트와 동일하게 얇은 가장자리)
           this.ctx.fillStyle = isSelected ? '#000' : '#333';
           this.ctx.beginPath();
           this.ctx.arc(spawn.x, spawn.y, radius - 3, 0, Math.PI * 2);
