@@ -22,4 +22,5 @@ export interface TrackServerConfig {
 }
 export declare const basicCircuitServerConfig: TrackServerConfig;
 export declare const monzaServerConfig: TrackServerConfig;
+export declare const newTrackServerConfig: TrackServerConfig;
 export declare const trackServerConfigs: Map<string, TrackServerConfig>;

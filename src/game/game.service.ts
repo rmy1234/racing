@@ -753,26 +753,41 @@ export class GameService {
 
   // 중앙선으로부터의 최소 거리를 이용해 트랙 안/밖 판정
   // 클라이언트와 동일한 판정 범위 사용 (trackWidth / 2 + 여유값)
+  // 세그먼트까지의 거리를 계산하여 더 정확한 판정
   private isOnTrack(position: Vector2D, trackName: string): boolean {
     const centerPath = this.trackCenterPaths.get(trackName) || this.trackCenterPaths.get('basic-circuit')!;
-    let minDistSq = Infinity;
+    let minDist = Infinity;
 
-    for (const point of centerPath) {
-      const dx = position.x - point.x;
-      const dy = position.y - point.y;
-      const distSq = dx * dx + dy * dy;
-      if (distSq < minDistSq) {
-        minDistSq = distSq;
+    // 각 세그먼트(두 포인트 사이의 선분)까지의 거리 계산
+    for (let i = 0; i < centerPath.length; i++) {
+      const p1 = centerPath[i];
+      const p2 = centerPath[(i + 1) % centerPath.length];
+      
+      // 세그먼트까지의 최소 거리 계산
+      const dx = p2.x - p1.x;
+      const dy = p2.y - p1.y;
+      const segLenSq = dx * dx + dy * dy;
+      
+      if (segLenSq < 0.001) {
+        // 세그먼트 길이가 거의 0이면 포인트 간 거리만 계산
+        const dist = Math.sqrt((position.x - p1.x) ** 2 + (position.y - p1.y) ** 2);
+        minDist = Math.min(minDist, dist);
+      } else {
+        // 세그먼트 위의 가장 가까운 점 찾기
+        const t = Math.max(0, Math.min(1, ((position.x - p1.x) * dx + (position.y - p1.y) * dy) / segLenSq));
+        const closestX = p1.x + t * dx;
+        const closestY = p1.y + t * dy;
+        const dist = Math.sqrt((position.x - closestX) ** 2 + (position.y - closestY) ** 2);
+        minDist = Math.min(minDist, dist);
       }
     }
 
     // 모든 트랙에서 TRACK_WIDTH_PX 상수 사용
     const trackWidth = this.TRACK_WIDTH_PX;
     // 클라이언트와 동일: trackWidth / 2 + 여유값
-    // 기본 서킷은 트랙 크기가 커졌으므로 여유값을 더 크게 설정
-    const margin = trackName === 'basic-circuit' ? 50 : 20;
+    const margin = 50; // 모든 트랙에서 동일한 여유값 사용
     const maxDist = trackWidth / 2 + margin;
-    return Math.sqrt(minDistSq) <= maxDist;
+    return minDist <= maxDist;
   }
 
   getRoom(roomId: string): GameRoom | null {

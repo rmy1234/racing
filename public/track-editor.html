@@ -1638,72 +1638,72 @@
         }
         });
 
-// 시작선 그리기 (체커플래그 패턴 - 트랙 전체 너비를 꽉 채움)
-if (this.startLine && (this.startLine.x !== 0 || this.startLine.y !== 0)) {
-  const isHovered =
-    this.hoveredStartLine &&
-    (this.mode === 'deleteStartLine' || this.mode === 'moveStartLine');
+        // 시작선 그리기 (체커플래그 패턴 - 트랙 전체 너비를 꽉 채움)
+        if (this.startLine && (this.startLine.x !== 0 || this.startLine.y !== 0)) {
+        const isHovered =
+            this.hoveredStartLine &&
+            (this.mode === 'deleteStartLine' || this.mode === 'moveStartLine');
 
-  const trackWidth =
-    parseInt(document.getElementById('trackWidth')?.value || '120') || 120;
-  const halfTrackWidth = trackWidth / 2;
+        const trackWidth =
+            parseInt(document.getElementById('trackWidth')?.value || '120') || 120;
+        const halfTrackWidth = trackWidth / 2;
 
-  const perpAngle = this.startLine.angle + Math.PI / 2;
-  const cos = Math.cos(perpAngle);
-  const sin = Math.sin(perpAngle);
+        const perpAngle = this.startLine.angle + Math.PI / 2;
+        const cos = Math.cos(perpAngle);
+        const sin = Math.sin(perpAngle);
 
-  // 체커 플래그 크기 계산
-  const thickness = 24; // 시작선 두께 (체커 플래그 길이)
-  
-  // 트랙 내부 너비를 완전히 채우도록 설정
-  const actualWidth = trackWidth; // 트랙 너비 100%
-  const blockCount = 8; // 고정된 블록 개수 (균등하게 나누기)
-  const blockSize = actualWidth / blockCount; // 블록 크기를 트랙 너비에 맞춰 자동 계산
-  const halfActualWidth = actualWidth / 2;
+        // 체커 플래그 크기 계산
+        const thickness = 24; // 시작선 두께 (체커 플래그 길이)
+        
+        // 트랙 내부 너비를 완전히 채우도록 설정
+        const actualWidth = trackWidth; // 트랙 너비 100%
+        const blockCount = 8; // 고정된 블록 개수 (균등하게 나누기)
+        const blockSize = actualWidth / blockCount; // 블록 크기를 트랙 너비에 맞춰 자동 계산
+        const halfActualWidth = actualWidth / 2;
 
-  // === 호버 외곽선 === (체커 플래그 사각형 영역)
-  if (isHovered) {
-    this.ctx.save();
-    this.ctx.translate(this.startLine.x, this.startLine.y);
-    this.ctx.rotate(this.startLine.angle + Math.PI / 2);
+        // === 호버 외곽선 === (체커 플래그 사각형 영역)
+        if (isHovered) {
+            this.ctx.save();
+            this.ctx.translate(this.startLine.x, this.startLine.y);
+            this.ctx.rotate(this.startLine.angle + Math.PI / 2);
 
-    this.ctx.strokeStyle =
-      this.mode === 'deleteStartLine' ? '#ff0000' : '#00ff88';
-    this.ctx.lineWidth = 4;
-    this.ctx.setLineDash([]);
-    this.ctx.beginPath();
-    // 체커 플래그의 사각형 외곽선 그리기
-    this.ctx.rect(-halfActualWidth, -thickness / 2, actualWidth, thickness);
-    this.ctx.stroke();
+            this.ctx.strokeStyle =
+            this.mode === 'deleteStartLine' ? '#ff0000' : '#00ff88';
+            this.ctx.lineWidth = 4;
+            this.ctx.setLineDash([]);
+            this.ctx.beginPath();
+            // 체커 플래그의 사각형 외곽선 그리기
+            this.ctx.rect(-halfActualWidth, -thickness / 2, actualWidth, thickness);
+            this.ctx.stroke();
 
-    this.ctx.restore();
-  }
+            this.ctx.restore();
+        }
 
-  // === 체커플래그 === (트랙 전체 너비를 꽉 채움)
-  this.ctx.save();
-  this.ctx.translate(this.startLine.x, this.startLine.y);
-  this.ctx.rotate(this.startLine.angle + Math.PI / 2);
+        // === 체커플래그 === (트랙 전체 너비를 꽉 채움)
+        this.ctx.save();
+        this.ctx.translate(this.startLine.x, this.startLine.y);
+        this.ctx.rotate(this.startLine.angle + Math.PI / 2);
 
-  const startX = -halfActualWidth; // 중심에서 시작하여 양쪽으로 그리기
+        const startX = -halfActualWidth; // 중심에서 시작하여 양쪽으로 그리기
 
-  // 2행으로 그리기
-  const rowHeight = thickness / 2;
+        // 2행으로 그리기
+        const rowHeight = thickness / 2;
 
-  // 중심에서 양쪽으로 트랙 전체 폭 그리기
-  for (let row = 0; row < 2; row++) {
-    for (let i = 0; i < blockCount; i++) {
-      const x = startX + i * blockSize;
-      const y = -thickness / 2 + row * rowHeight;
-      
-      // 행과 열의 합이 짝수면 검은색, 홀수면 흰색
-      const isBlack = (i + row) % 2 === 0;
-      this.ctx.fillStyle = isBlack ? '#000' : '#fff';
-      this.ctx.fillRect(x, y, blockSize, rowHeight);
-    }
-  }
+        // 중심에서 양쪽으로 트랙 전체 폭 그리기
+        for (let row = 0; row < 2; row++) {
+            for (let i = 0; i < blockCount; i++) {
+            const x = startX + i * blockSize;
+            const y = -thickness / 2 + row * rowHeight;
+            
+            // 행과 열의 합이 짝수면 검은색, 홀수면 흰색
+            const isBlack = (i + row) % 2 === 0;
+            this.ctx.fillStyle = isBlack ? '#000' : '#fff';
+            this.ctx.fillRect(x, y, blockSize, rowHeight);
+            }
+        }
 
-  this.ctx.restore();
-}
+        this.ctx.restore();
+        }
 
 
         // 출발 위치 그리기 (줌과 관계없이 고정된 크기) - 체크포인트와 동일한 스타일

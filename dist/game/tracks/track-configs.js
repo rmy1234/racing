@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.trackServerConfigs = exports.monzaServerConfig = exports.basicCircuitServerConfig = void 0;
+exports.trackServerConfigs = exports.newTrackServerConfig = exports.monzaServerConfig = exports.basicCircuitServerConfig = void 0;
 exports.basicCircuitServerConfig = {
     buildCenterPath: function () {
         const points = [];
@@ -144,8 +144,71 @@ exports.monzaServerConfig = {
     },
     trackWidth: 120,
 };
+exports.newTrackServerConfig = {
+    buildCenterPath: function () {
+        return [
+            { x: 3970, y: 477 },
+            { x: 3954, y: 1249 },
+            { x: 3934, y: 2278 },
+            { x: 3917, y: 2517 },
+            { x: 3822, y: 2645 },
+            { x: 3649, y: 2722 },
+            { x: 3486, y: 2710 },
+            { x: 3343, y: 2669 },
+            { x: 3168, y: 2591 },
+            { x: 2986, y: 2582 },
+            { x: 2778, y: 2691 },
+            { x: 2634, y: 2836 },
+            { x: 2516, y: 2875 },
+            { x: 2389, y: 2844 },
+            { x: 2297, y: 2768 },
+            { x: 2227, y: 2688 },
+            { x: 2138, y: 2616 },
+            { x: 2058, y: 2597 },
+            { x: 1969, y: 2601 },
+            { x: 1801, y: 2592 },
+            { x: 1656, y: 2505 },
+            { x: 1583, y: 2419 },
+            { x: 1529, y: 2330 },
+            { x: 1488, y: 2241 },
+            { x: 1461, y: 2155 },
+            { x: 1452, y: 2051 },
+            { x: 1453, y: 1960 },
+            { x: 1454, y: 1833 },
+            { x: 1449, y: 399 },
+            { x: 1695, y: 103 },
+            { x: 2154, y: 116 },
+            { x: 2350, y: 126 },
+            { x: 2530, y: 131 },
+            { x: 2626, y: 145 },
+            { x: 2717, y: 166 },
+            { x: 2797, y: 176 },
+            { x: 2956, y: 216 }
+        ];
+    },
+    spawnPositions: [
+        { x: 3966, y: 719 }
+    ],
+    spawnAngle: 1.560,
+    checkpoints: [
+        { x: 3935, y: 2282, angle: 1.596 },
+        { x: 3347, y: 2668, angle: -2.763 },
+        { x: 2778, y: 2694, angle: 2.493 },
+        { x: 1578, y: 2415, angle: -2.183 },
+        { x: 1450, y: 401, angle: -1.574 },
+        { x: 2534, y: 127, angle: 0.066 },
+        { x: 3635, y: 332, angle: 0.256 }
+    ],
+    startLine: {
+        x: 3963.364169486476,
+        y: 797.1788222775224,
+        angle: 1.592
+    },
+    trackWidth: 120
+};
 exports.trackServerConfigs = new Map([
     ['basic-circuit', exports.basicCircuitServerConfig],
     ['monza', exports.monzaServerConfig],
+    ['new-track', exports.newTrackServerConfig],
 ]);
 //# sourceMappingURL=track-configs.js.map

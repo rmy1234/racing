@@ -153,27 +153,125 @@ class Renderer {
     const ctx = this.ctx;
     
     this.currentTrack.curbs.forEach(curb => {
-      ctx.save();
-      // 카메라 오프셋은 이미 적용되어 있음
-      ctx.translate(curb.x, curb.y);
-      ctx.rotate(curb.angle);
+      // centerPath가 있으면 경로 기반으로 곡선 연석 그리기
+      if (curb.centerPath && curb.centerPath.length >= 2) {
+        this.drawPathBasedCurb(curb.centerPath, curb.width || 20, curb.trackSide || 'outer');
+      } else {
+        // 구형 포맷: 단일 직사각형
+        ctx.save();
+        ctx.translate(curb.x, curb.y);
+        ctx.rotate(curb.angle);
+        
+        const stripeWidth = 10;
+        const numStripes = Math.ceil(curb.width / stripeWidth);
+        
+        for (let i = 0; i < numStripes; i++) {
+          ctx.fillStyle = i % 2 === 0 ? '#ff3333' : '#ffffff';
+          ctx.fillRect(
+            -curb.width / 2 + i * stripeWidth,
+            -curb.height / 2,
+            stripeWidth,
+            curb.height
+          );
+        }
+        
+        ctx.restore();
+      }
+    });
+  }
+  
+  // 경로 기반 곡선 연석 그리기 (에디터와 동일한 방식)
+  drawPathBasedCurb(centerPath, kerbWidth, trackSide = 'outer') {
+    const ctx = this.ctx;
+    if (!centerPath || centerPath.length < 2) return;
+
+    // 누적 길이 테이블
+    const cumulative = [0];
+    for (let i = 1; i < centerPath.length; i++) {
+      const p1 = centerPath[i - 1];
+      const p2 = centerPath[i];
+      const dx = p2.x - p1.x;
+      const dy = p2.y - p1.y;
+      cumulative.push(cumulative[i - 1] + Math.hypot(dx, dy));
+    }
+    const totalLength = cumulative[cumulative.length - 1];
+
+    // 경로상의 특정 거리에서 위치와 법선을 계산
+    const getPointAt = (dist) => {
+      const clamped = Math.min(Math.max(dist, 0), totalLength);
+      let idx = cumulative.findIndex((len) => len >= clamped);
+      if (idx === -1) idx = cumulative.length - 1;
+      if (idx === 0) idx = 1;
+
+      const p1 = centerPath[idx - 1];
+      const p2 = centerPath[idx];
+      const segLen = cumulative[idx] - cumulative[idx - 1] || 1;
+      const t = (clamped - cumulative[idx - 1]) / segLen;
+
+      const x = p1.x + (p2.x - p1.x) * t;
+      const y = p1.y + (p2.y - p1.y) * t;
+
+      const dx = p2.x - p1.x;
+      const dy = p2.y - p1.y;
+      const len = Math.hypot(dx, dy) || 1;
+
+      // 법선 계산 (트랙 안쪽/바깥쪽에 따라 방향 결정)
+      const nx = -dy / len;
+      const ny = dx / len;
+      const sign = trackSide === 'inner' ? 1 : -1;
+
+      return {
+        track: { x, y },
+        outer: { x: x + nx * kerbWidth * sign, y: y + ny * kerbWidth * sign }
+      };
+    };
+
+    const blockSize = 40; // 색상 패턴 길이
+    const stepSize = 0.5; // 경로를 따라 그릴 때의 간격
+
+    ctx.save();
+
+    // 색상이 바뀌는 지점들
+    const colorChangePoints = [0];
+    for (let d = blockSize; d < totalLength; d += blockSize) {
+      colorChangePoints.push(d);
+    }
+    colorChangePoints.push(totalLength);
+
+    // 각 색상 블록을 연속적으로 그리기
+    for (let i = 0; i < colorChangePoints.length - 1; i++) {
+      const startDist = colorChangePoints[i];
+      const endDist = colorChangePoints[i + 1];
+      const blockIdx = Math.floor(startDist / blockSize);
+      const isRed = blockIdx % 2 === 0;
+      const color = isRed ? '#ff3333' : '#ffffff';
+
+      ctx.beginPath();
       
-      // 빨간색-흰색 줄무늬 연석
-      const stripeWidth = 10;
-      const numStripes = Math.ceil(curb.width / stripeWidth);
-      
-      for (let i = 0; i < numStripes; i++) {
-        ctx.fillStyle = i % 2 === 0 ? '#ff3333' : '#ffffff';
-        ctx.fillRect(
-          -curb.width / 2 + i * stripeWidth,
-          -curb.height / 2,
-          stripeWidth,
-          curb.height
-        );
+      // 트랙 경계선 (앞에서 뒤로)
+      for (let d = startDist; d <= endDist; d += stepSize) {
+        const dist = Math.min(d, endDist);
+        const pt = getPointAt(dist);
+        if (d === startDist) {
+          ctx.moveTo(pt.track.x, pt.track.y);
+        } else {
+          ctx.lineTo(pt.track.x, pt.track.y);
+        }
       }
       
-      ctx.restore();
-    });
+      // 바깥쪽 경계선 (뒤에서 앞으로)
+      for (let d = endDist; d >= startDist; d -= stepSize) {
+        const dist = Math.max(d, startDist);
+        const pt = getPointAt(dist);
+        ctx.lineTo(pt.outer.x, pt.outer.y);
+      }
+      
+      ctx.closePath();
+      ctx.fillStyle = color;
+      ctx.fill();
+    }
+
+    ctx.restore();
   }
   
   drawStartLine() {

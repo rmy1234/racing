@@ -16,6 +16,11 @@ const TRACKS = {
     id: 'monza',
     name: '몬차 서킷',
     data: null // tracks/monza.js에서 로드
+  },
+  'new-track': {
+    id: 'new-track',
+    name: '새 트랙',
+    data: null // tracks/new-track.js에서 로드
   }
 };
 

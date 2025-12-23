@@ -431,19 +431,29 @@ let GameService = class GameService {
     }
     isOnTrack(position, trackName) {
         const centerPath = this.trackCenterPaths.get(trackName) || this.trackCenterPaths.get('basic-circuit');
-        let minDistSq = Infinity;
-        for (const point of centerPath) {
-            const dx = position.x - point.x;
-            const dy = position.y - point.y;
-            const distSq = dx * dx + dy * dy;
-            if (distSq < minDistSq) {
-                minDistSq = distSq;
+        let minDist = Infinity;
+        for (let i = 0; i < centerPath.length; i++) {
+            const p1 = centerPath[i];
+            const p2 = centerPath[(i + 1) % centerPath.length];
+            const dx = p2.x - p1.x;
+            const dy = p2.y - p1.y;
+            const segLenSq = dx * dx + dy * dy;
+            if (segLenSq < 0.001) {
+                const dist = Math.sqrt((position.x - p1.x) ** 2 + (position.y - p1.y) ** 2);
+                minDist = Math.min(minDist, dist);
+            }
+            else {
+                const t = Math.max(0, Math.min(1, ((position.x - p1.x) * dx + (position.y - p1.y) * dy) / segLenSq));
+                const closestX = p1.x + t * dx;
+                const closestY = p1.y + t * dy;
+                const dist = Math.sqrt((position.x - closestX) ** 2 + (position.y - closestY) ** 2);
+                minDist = Math.min(minDist, dist);
             }
         }
         const trackWidth = this.TRACK_WIDTH_PX;
-        const margin = trackName === 'basic-circuit' ? 50 : 20;
+        const margin = 50;
         const maxDist = trackWidth / 2 + margin;
-        return Math.sqrt(minDistSq) <= maxDist;
+        return minDist <= maxDist;
     }
     getRoom(roomId) {
         return this.rooms.get(roomId) || null;
