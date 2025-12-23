@@ -428,7 +428,6 @@ TrackEditorUtils.getSmoothPath = function(points, targetPoints = 400) {
   return smoothPath;
 }
 
-// 가장 가까운 트랙 경계 찾기 (연석 배치용)
 TrackEditorUtils.findNearestTrackBoundary = function(x, y, points, trackWidth, kerbLength, isDragging = false, editor = null) {
   if (points.length < 2) return null;
   
@@ -462,9 +461,16 @@ TrackEditorUtils.findNearestTrackBoundary = function(x, y, points, trackWidth, k
   let isInnerPath = false;
   let nearestT = 0; // 세그먼트 내 위치 (0~1)
   
-  // 드래그 중에는 샘플링 개수를 줄여서 성능 향상 (20 -> 5)
-  // 드래그 종료 후 정밀한 위치 계산은 handleMouseUp에서 수행
-  const sampleCount = isDragging ? 5 : 20;
+  // ===== 핵심 수정: 샘플링 개수 대폭 증가 =====
+  // 드래그 중에도 높은 샘플링으로 세밀한 제어 가능
+  // 기존: isDragging ? 5 : 20
+  const sampleCount = isDragging ? 40 : 100;
+  
+  // 또는 길이에 비례하여 동적 조정 (더 세밀하게)
+  // const sampleCount = isDragging ? 
+  //   Math.max(40, Math.floor(kerbLength / 10)) : 
+  //   Math.max(100, Math.floor(kerbLength / 3));
+  // ==========================================
   
   // 내부 경계 확인 - 각 세그먼트를 샘플링
   for (let i = 0; i < innerPath.length - 1; i++) {

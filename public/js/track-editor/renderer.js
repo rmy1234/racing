@@ -117,52 +117,6 @@ TrackEditorRenderer.drawPathBasedKerb = function(ctx, centerPath, kerbWidth, tra
   ctx.restore();
 };
 
-// 구형 곡선 연석 그리기 (하위 호환성)
-TrackEditorRenderer.drawCurvedKerb = function(ctx, pathSegment, height, isSelected) {
-  if (!pathSegment || pathSegment.length < 2) return;
-  
-  const blockWidth = 20; // 각 블록의 너비
-  const blockHeight = height;
-  
-  ctx.save();
-  ctx.globalCompositeOperation = 'source-over';
-  
-  // 곡선 경로를 따라 작은 블록들을 그리기
-  for (let i = 0; i < pathSegment.length - 1; i++) {
-    const p1 = pathSegment[i];
-    const p2 = pathSegment[i + 1];
-    
-    // 두 점 사이의 거리와 각도 계산
-    const dx = p2.x - p1.x;
-    const dy = p2.y - p1.y;
-    const dist = Math.sqrt(dx * dx + dy * dy);
-    const angle = Math.atan2(dy, dx);
-    
-    // 블록 개수 계산
-    const blockCount = Math.max(1, Math.floor(dist / blockWidth));
-    
-    for (let j = 0; j < blockCount; j++) {
-      const t = j / blockCount;
-      const x = p1.x + dx * t;
-      const y = p1.y + dy * t;
-      const isRed = (i * blockCount + j) % 2 === 0;
-      
-      ctx.save();
-      ctx.translate(x, y);
-      ctx.rotate(angle);
-      
-      // 흰색/빨간색 패턴 (선택 상태와 관계없이 항상 빨간색/하얀색)
-      const color = isRed ? '#ff0000' : '#ffffff';
-      ctx.fillStyle = color;
-      ctx.fillRect(-blockWidth / 2, -blockHeight / 2, blockWidth, blockHeight);
-      
-      ctx.restore();
-    }
-  }
-  
-  ctx.restore();
-};
-
 // 렌더링 스케줄링 (부드러운 애니메이션을 위해)
 TrackEditorRenderer.scheduleRender = function(editorInstance) {
   if (editorInstance.animationFrameId) return; // 이미 스케줄링됨

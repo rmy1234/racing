@@ -63,6 +63,97 @@ TrackEditorKerbManager.selectKerb = function(editor, index) {
   editor.render();
 };
 
+// 연석 이동 (세밀한 조정) - 드래그 이동용
+TrackEditorKerbManager.moveKerbDirect = function(editor, index, deltaX, deltaY, isFineTuning = false) {
+  if (index < 0 || index >= editor.curbs.length) return;
+  
+  const kerb = editor.curbs[index];
+  
+  // 세밀 조정 모드일 때 이동량을 1/5로 줄임
+  const movementScale = isFineTuning ? 0.2 : 1.0;
+  const actualDeltaX = deltaX * movementScale;
+  const actualDeltaY = deltaY * movementScale;
+  
+  // 경로 기반 연석
+  if (kerb.centerPath && kerb.centerPath.length > 0) {
+    // 모든 경로 포인트를 직접 이동 (트랙 경계를 따르지 않음)
+    kerb.centerPath = kerb.centerPath.map(point => ({
+      x: point.x + actualDeltaX,
+      y: point.y + actualDeltaY
+    }));
+  }
+  // 구형 포맷
+  else if (kerb.x !== undefined && kerb.y !== undefined) {
+    kerb.x += actualDeltaX;
+    kerb.y += actualDeltaY;
+  }
+  
+  editor.updateSelectedKerbInfo();
+  editor.updateCodeOutput();
+  editor.saveToStorage();
+  editor.render();
+};
+
+// 연석을 트랙 경계에 스냅 (필요시 사용)
+TrackEditorKerbManager.snapKerbToTrackBoundary = function(editor, index) {
+  if (index < 0 || index >= editor.curbs.length) return;
+  
+  const kerb = editor.curbs[index];
+  
+  if (kerb.centerPath && kerb.centerPath.length > 0) {
+    const midIdx = Math.floor(kerb.centerPath.length / 2);
+    const midPoint = kerb.centerPath[midIdx];
+    const kerbLength = kerb.length || 300;
+    
+    // 현재 중심점에서 가장 가까운 트랙 경계로 스냅
+    const boundary = editor.findNearestTrackBoundary(midPoint.x, midPoint.y, kerbLength, false);
+    
+    if (boundary && boundary.kerbPath && boundary.kerbPath.length >= 2) {
+      editor.curbs[index] = {
+        centerPath: boundary.kerbPath,
+        width: kerb.width || 20,
+        length: kerbLength,
+        trackSide: boundary.isInner ? 'inner' : 'outer'
+      };
+      
+      editor.updateSelectedKerbInfo();
+      editor.updateCodeOutput();
+      editor.saveToStorage();
+      editor.render();
+    }
+  }
+};
+
+// 연석 위치 미세 조정 (키보드 화살표 키 사용)
+TrackEditorKerbManager.adjustKerbPosition = function(editor, direction, isFineTuning = false) {
+  if (editor.selectedKerbIndex < 0 || editor.selectedKerbIndex >= editor.curbs.length) {
+    return;
+  }
+  
+  // 기본 이동 단위 (픽셀)
+  const baseStep = isFineTuning ? 1 : 5;
+  
+  let deltaX = 0;
+  let deltaY = 0;
+  
+  switch(direction) {
+    case 'left':
+      deltaX = -baseStep;
+      break;
+    case 'right':
+      deltaX = baseStep;
+      break;
+    case 'up':
+      deltaY = -baseStep;
+      break;
+    case 'down':
+      deltaY = baseStep;
+      break;
+  }
+  
+  editor.moveKerb(editor.selectedKerbIndex, deltaX, deltaY, false);
+};
+
 // 연석 목록 업데이트
 TrackEditorKerbManager.updateKerbList = function(editor) {
   const list = document.getElementById('kerbList');
@@ -147,7 +238,16 @@ TrackEditorKerbManager.updateSelectedKerbInfo = function(editor) {
       const sideText = kerb.trackSide === 'inner' ? '내부' : '외부';
       const widthText = kerb.width || 20;
       const lengthText = kerb.length || 300;
-      infoDiv.textContent = `연석 ${editor.selectedKerbIndex + 1}: ${sideText} | 폭: ${widthText}px, 길이: ${lengthText}px`;
+      const midIdx = Math.floor(kerb.centerPath.length / 2);
+      const midPoint = kerb.centerPath[midIdx];
+      
+      infoDiv.innerHTML = `
+        연석 ${editor.selectedKerbIndex + 1}: ${sideText} | 폭: ${widthText}px, 길이: ${lengthText}px<br>
+        <span style="font-size: 10px; color: #888;">
+          위치: (${Math.round(midPoint.x)}, ${Math.round(midPoint.y)}) | 
+          방향키로 이동 (Shift: 1px, 일반: 5px)
+        </span>
+      `;
       
       // 길이 조절만 가능하도록 (위치는 드래그로)
       if (document.getElementById('kerbLength')) {
@@ -163,7 +263,12 @@ TrackEditorKerbManager.updateSelectedKerbInfo = function(editor) {
     // 구형 포맷
     else if (kerb.x !== undefined && kerb.y !== undefined) {
       const angleDeg = ((kerb.angle || 0) * 180 / Math.PI).toFixed(1);
-      infoDiv.textContent = `연석 ${editor.selectedKerbIndex + 1}: (${kerb.x}, ${kerb.y}) [${angleDeg}°] 길이: ${kerb.width || 200}px`;
+      infoDiv.innerHTML = `
+        연석 ${editor.selectedKerbIndex + 1}: (${kerb.x}, ${kerb.y}) [${angleDeg}°] 길이: ${kerb.width || 200}px<br>
+        <span style="font-size: 10px; color: #888;">
+          방향키로 이동 (Shift: 1px, 일반: 5px)
+        </span>
+      `;
       if (document.getElementById('kerbX')) document.getElementById('kerbX').value = kerb.x;
       if (document.getElementById('kerbY')) document.getElementById('kerbY').value = kerb.y;
       if (document.getElementById('kerbAngle')) document.getElementById('kerbAngle').value = (kerb.angle || 0).toFixed(3);
@@ -240,4 +345,3 @@ TrackEditorKerbManager.updateSelectedKerb = function(editor) {
 if (typeof window !== 'undefined') {
   window.TrackEditorKerbManager = TrackEditorKerbManager;
 }
-

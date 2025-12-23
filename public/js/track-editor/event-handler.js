@@ -246,6 +246,32 @@ TrackEditorEventHandler.setupEventListeners = function(editor) {
       editor.canvas.style.cursor = editor.mode === 'add' ? 'crosshair' : editor.mode === 'move' ? 'move' : 'pointer';
     }
   });
+
+    // 키보드 이벤트 리스너 추가 (TrackEditor 생성자나 초기화 함수에)
+  document.addEventListener('keydown', (e) => {
+    if (this.selectedKerbIndex >= 0) {
+      const isFineTuning = e.shiftKey; // Shift 키로 세밀 조정
+      
+      switch(e.key) {
+        case 'ArrowLeft':
+          e.preventDefault();
+          this.adjustKerbPosition('left', isFineTuning);
+          break;
+        case 'ArrowRight':
+          e.preventDefault();
+          this.adjustKerbPosition('right', isFineTuning);
+          break;
+        case 'ArrowUp':
+          e.preventDefault();
+          this.adjustKerbPosition('up', isFineTuning);
+          break;
+        case 'ArrowDown':
+          e.preventDefault();
+          this.adjustKerbPosition('down', isFineTuning);
+          break;
+      }
+    }
+  });
 };
 
 // 전역 스코프에 노출
