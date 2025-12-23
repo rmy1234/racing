@@ -41,7 +41,8 @@ export interface CarState {
 export interface GameRoom {
   id: string;
   name: string;
-  host: string;
+  host: string; // playerId
+  hostNickname: string; // 호스트 닉네임 (재연결 시 식별용)
   players: Map<string, CarState>;
   status: 'waiting' | 'countdown' | 'racing' | 'finished';
   trackName: string;
@@ -204,6 +205,7 @@ export class GameService {
       id: roomId,
       name: roomName,
       host: hostId,
+      hostNickname: hostNickname, // 호스트 닉네임 저장
       players: new Map(),
       status: 'waiting',
       trackName: trackId ?? 'basic-circuit',
@@ -225,6 +227,27 @@ export class GameService {
   joinRoom(roomId: string, playerId: string, nickname: string, carSkin?: string | null): GameRoom | null {
     const room = this.rooms.get(roomId);
     if (!room) return null;
+    
+    // 기존 플레이어가 재연결하는 경우 (레이스 중이어도 허용)
+    // room.players에 플레이어가 있으면 이전에 참가했던 플레이어로 간주
+    if (room.players.has(playerId)) {
+      // 이미 방에 있는 플레이어는 재연결만 처리
+      // playerRooms 매핑 복원 (연결이 끊어졌다가 재연결한 경우)
+      this.playerRooms.set(playerId, roomId);
+      return room;
+    }
+    
+    // 방이 비어있지만 이전 호스트가 재연결하는 경우 방 복원
+    // 새로고침 시 client.id가 변경되므로 닉네임으로 호스트 식별
+    if (room.players.size === 0 && room.hostNickname === nickname) {
+      // 호스트가 재연결: 플레이어를 다시 추가하고 호스트 ID 업데이트
+      room.host = playerId; // 새로운 client.id로 업데이트
+      this.addPlayerToRoom(room, playerId, nickname, 0, carSkin);
+      this.playerRooms.set(playerId, roomId);
+      return room;
+    }
+    
+    // 새 플레이어는 대기 상태일 때만 참가 가능
     if (room.status !== 'waiting') return null;
     if (room.players.size >= room.maxPlayers) return null;
 
@@ -449,12 +472,24 @@ export class GameService {
       return { room, wasHost };
     }
 
-    // 대기실/완료 상태에서는 기존처럼 방에서 완전히 제거
+    // 대기실/완료 상태에서는 플레이어를 제거하되, 호스트인 경우에는 방을 유지
+    // (재연결을 고려하여 호스트가 나가도 방을 즉시 삭제하지 않음)
     room.players.delete(playerId);
     this.playerRooms.delete(playerId);
 
-    // 방이 비었으면 삭제
+    // 방이 비었으면 삭제 (단, 호스트가 나간 경우 잠시 유지)
     if (room.players.size === 0) {
+      // 호스트가 나간 경우 5초 후 삭제 (재연결 대기)
+      if (wasHost) {
+        setTimeout(() => {
+          const checkRoom = this.rooms.get(roomId);
+          if (checkRoom && checkRoom.players.size === 0) {
+            this.rooms.delete(roomId);
+          }
+        }, 5000);
+        return { room, wasHost };
+      }
+      // 일반 플레이어가 나간 경우 즉시 삭제
       this.rooms.delete(roomId);
       return { room: null, wasHost };
     }
@@ -464,6 +499,11 @@ export class GameService {
       const nextHost = room.players.keys().next().value;
       if (nextHost) {
         room.host = nextHost;
+        // 호스트 닉네임도 업데이트
+        const nextHostCar = room.players.get(nextHost);
+        if (nextHostCar) {
+          room.hostNickname = nextHostCar.nickname;
+        }
       }
     }
 
@@ -936,6 +976,7 @@ export class GameService {
       id: room.id,
       name: room.name,
       host: room.host,
+      hostNickname: room.hostNickname,
       players: Array.from(room.players.values()),
       status: room.status,
       trackName: room.trackName,

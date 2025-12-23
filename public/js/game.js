@@ -56,11 +56,15 @@ class Game {
       // 연결이 성공한 경우에만 방 목록 요청
       if (this.network.connected) {
         this.network.getRooms();
+        // 저장된 방 정보가 있으면 재참가 시도
+        this.tryRejoinRoom();
       } else {
         // 연결되지 않았으면 잠시 후 재시도
         setTimeout(() => {
           if (this.network.connected) {
             this.network.getRooms();
+            // 저장된 방 정보가 있으면 재참가 시도
+            this.tryRejoinRoom();
           }
         }, 2000);
       }
@@ -145,7 +149,7 @@ class Game {
             return hex.length === 1 ? '0' + hex : hex;
           }).join('')}`;
           colorPicker.value = hexColor;
-          this.updateCarPreview();
+          // updateCarPreview는 initCarPreview에서 자동으로 색상이 반영되므로 호출 불필요
         }
       }
       
@@ -454,14 +458,36 @@ class Game {
     // 방 참가됨
     this.network.on('roomJoined', (room) => {
       this.currentRoom = room;
-      this.showWaitingRoom(room);
+      
+      // 레이스 중인 경우 게임 화면으로 전환
+      if (room.status === 'racing' || room.status === 'countdown') {
+        // 게임이 이미 시작된 경우 게임 화면으로 전환
+        this.startRace(room);
+      } else {
+        // 대기 중인 경우 대기실 표시
+        this.showWaitingRoom(room);
+      }
+      
       this.saveToStorage(); // 저장
     });
     
     // 참가 에러
     this.network.on('joinError', (error) => {
+      // 재참가 실패 시 저장된 정보 정리
+      localStorage.removeItem('game_currentRoom');
+      localStorage.setItem('game_currentScreen', 'lobby');
       alert(error.message);
     });
+    
+    // 네트워크 재연결 시 재참가 시도
+    if (this.network.socket) {
+      this.network.socket.on('connect', () => {
+        // 연결이 성공하면 잠시 후 재참가 시도 (서버가 준비될 시간을 줌)
+        setTimeout(() => {
+          this.tryRejoinRoom();
+        }, 500);
+      });
+    }
     
     // 플레이어 참가
     this.network.on('playerJoined', (data) => {
@@ -598,6 +624,33 @@ class Game {
     // RGB 색상을 JSON 문자열로 변환하여 전달
     const carColorStr = JSON.stringify(this.carColor);
     this.network.joinRoom(roomId, this.nickname, carColorStr);
+  }
+  
+  // 저장된 방 정보로 재참가 시도
+  tryRejoinRoom() {
+    if (!this.network.connected || !this.nickname) {
+      return;
+    }
+    
+    const savedScreen = localStorage.getItem('game_currentScreen');
+    const savedRoom = localStorage.getItem('game_currentRoom');
+    
+    // 대기실이나 게임 화면이었고, 방 정보가 있으면 재참가 시도
+    if ((savedScreen === 'waitingRoom' || savedScreen === 'gameScreen') && savedRoom) {
+      try {
+        const room = JSON.parse(savedRoom);
+        if (room && room.id) {
+          console.log('재참가 시도:', room.id);
+          const carColorStr = JSON.stringify(this.carColor);
+          this.network.joinRoom(room.id, this.nickname, carColorStr);
+        }
+      } catch (e) {
+        console.warn('재참가 실패:', e);
+        // 재참가 실패 시 저장된 정보 정리
+        localStorage.removeItem('game_currentRoom');
+        localStorage.setItem('game_currentScreen', 'lobby');
+      }
+    }
   }
   
   showWaitingRoom(room) {

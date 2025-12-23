@@ -78,6 +78,7 @@ let GameService = class GameService {
             id: roomId,
             name: roomName,
             host: hostId,
+            hostNickname: hostNickname,
             players: new Map(),
             status: 'waiting',
             trackName: trackId ?? 'basic-circuit',
@@ -95,6 +96,16 @@ let GameService = class GameService {
         const room = this.rooms.get(roomId);
         if (!room)
             return null;
+        if (room.players.has(playerId)) {
+            this.playerRooms.set(playerId, roomId);
+            return room;
+        }
+        if (room.players.size === 0 && room.hostNickname === nickname) {
+            room.host = playerId;
+            this.addPlayerToRoom(room, playerId, nickname, 0, carSkin);
+            this.playerRooms.set(playerId, roomId);
+            return room;
+        }
         if (room.status !== 'waiting')
             return null;
         if (room.players.size >= room.maxPlayers)
@@ -240,6 +251,15 @@ let GameService = class GameService {
         room.players.delete(playerId);
         this.playerRooms.delete(playerId);
         if (room.players.size === 0) {
+            if (wasHost) {
+                setTimeout(() => {
+                    const checkRoom = this.rooms.get(roomId);
+                    if (checkRoom && checkRoom.players.size === 0) {
+                        this.rooms.delete(roomId);
+                    }
+                }, 5000);
+                return { room, wasHost };
+            }
             this.rooms.delete(roomId);
             return { room: null, wasHost };
         }
@@ -247,6 +267,10 @@ let GameService = class GameService {
             const nextHost = room.players.keys().next().value;
             if (nextHost) {
                 room.host = nextHost;
+                const nextHostCar = room.players.get(nextHost);
+                if (nextHostCar) {
+                    room.hostNickname = nextHostCar.nickname;
+                }
             }
         }
         return { room, wasHost };
@@ -560,6 +584,7 @@ let GameService = class GameService {
             id: room.id,
             name: room.name,
             host: room.host,
+            hostNickname: room.hostNickname,
             players: Array.from(room.players.values()),
             status: room.status,
             trackName: room.trackName,

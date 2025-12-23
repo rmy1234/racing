@@ -29,6 +29,7 @@ export interface GameRoom {
     id: string;
     name: string;
     host: string;
+    hostNickname: string;
     players: Map<string, CarState>;
     status: 'waiting' | 'countdown' | 'racing' | 'finished';
     trackName: string;
