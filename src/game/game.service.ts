@@ -102,17 +102,18 @@ export class GameService {
   // ========================================
   // 🏎️ F1 조향 시스템 파라미터
   // ========================================
-  
+
   // 앞바퀴 최대 조향각 (라디안)
-  // - 실제 F1: 약 20~30도
+  // - 실제 F1: 약 20~25도 (고속 안정성)
   // - 값이 클수록 급격한 회전 가능, 작을수록 안정적
-  // - 현재: 30도 (Math.PI / 6 ≈ 0.524 rad)
-  private readonly MAX_STEER_ANGLE = Math.PI / 6.5;
+  // - 현재: 약 25도 (Math.PI / 7.2 ≈ 0.436 rad)
+  private readonly MAX_STEER_ANGLE = Math.PI / 7.2;
+
   
   // 휠베이스(앞/뒤 바퀴 간 거리)
   // - 실제 F1: 약 3.0~3.6m
   // - 값이 클수록 회전 반경이 커짐 (안정적이지만 느린 회전)
-  // - 현재: 3.0m
+  // - 현재: 2.5m (더 빠른 회전을 위해 단축)
   private readonly WHEEL_BASE_METERS = 3.0;
 
   // 클라이언트 Track.checkpoints 와 동일한 체크포인트 (시계 방향)
@@ -162,19 +163,21 @@ export class GameService {
   // ========================================
   // 🏎️ F1 그립 & 다운포스 시스템
   // ========================================
-  
+
   // 기본 횡방향 그립 (타이어 컴파운드)
   // - 값이 클수록 미끄러짐 감소, 차가 목표 방향으로 빠르게 수렴
   // - 값이 작을수록 관성이 더 유지되어 급격한 방향 전환에 유리
   // - 실제 F1: 소프트 타이어(높은 그립) vs 하드 타이어(낮은 그립)
-  // - 현재: 9.0 (적당한 그립 - 급격한 방향 전환 반응성 향상)
-  private readonly BASE_LATERAL_GRIP = 11.0;
+  // - 현재: 6.5 (적당한 그립 - 급격한 방향 전환 반응성 향상)
+  private readonly BASE_LATERAL_GRIP = 6.5; // 🔧 회전력 감소, 미끄러짐 허용
+
   
   // 다운포스 계수 (속도²에 비례)
   // - 속도가 빠를수록 차체가 지면에 눌려 그립 증가
   // - 실제 F1: 고속 코너에서 다운포스로 안정성 확보
-  // - 현재: 0.004 (고속에서 강력한 다운포스)
-  private readonly DOWNFORCE_COEFF = 0.004;
+  // - 현재: 0.0022 (고속에서 강력한 다운포스)
+  private readonly DOWNFORCE_COEFF = 0.0022; // 🔧 안정은 유지, 회전력 감소
+
   
   // ========================================
   // 🏎️ F1 조향 반응성 파라미터
@@ -184,8 +187,8 @@ export class GameService {
   // - 값이 클수록 핸들이 빠르게 움직임 (가벼움)
   // - 값이 작을수록 핸들이 천천히 움직임 (무거움)
   // - 실제 F1: 파워 스티어링이지만 정밀한 피드백을 위해 적당한 무게감
-  // - 현재: 3.0 (무거운 F1 핸들 느낌)
-  private readonly STEERING_RESPONSE_SPEED = 3.5;
+  // - 현재: 5.5 (더 빠른 조향 반응)
+  private readonly STEERING_RESPONSE_SPEED = 5.5;
   
   // 조향 센터링 속도 (손을 뗐을 때 핸들이 중앙으로 복귀하는 속도)
   // - 실제 F1: 파워 스티어링의 센터링 포스로 핸들이 자동으로 중앙 복귀
@@ -483,25 +486,35 @@ export class GameService {
     else if (input.right && !input.left) targetSteer = this.MAX_STEER_ANGLE;
   
     // 속도에 따른 조향각 감쇠 (고속일수록 조향각 제한)
-    // - 실제 F1: 고속에서는 작은 핸들 조작으로도 큰 영향
-    // - visualSpeedRatio: 0(정지) ~ 1(최고속의 70%)
-    // - 저속: 최대 65%의 조향각 사용 (민첩한 코너링)
-    // - 고속: 최대 95%의 조향각 사용 (안정성 유지하며 코너링)
-    const visualSpeedRatio = Math.min(1, Math.abs(car.speed) / (this.MAX_SPEED * 0.7));
-    targetSteer *= 0.65 + 0.30 * visualSpeedRatio;
+    // - 실제 F1: 고속에서는 조향각을 줄여야 안정적
+    // - 저속(0km/h): 100% 조향각 사용
+    // - 고속(210km/h+): 30% 조향각만 사용
+    const speedRatio = Math.min(1, Math.abs(car.speed) / (this.MAX_SPEED * 0.7));
+    targetSteer *= 1.0 - speedRatio * 0.7;
 
     // 조향각 부드럽게 적용 (핸들의 관성/무게감)
     // - steerInertia: 속도가 빠를수록 핸들이 무겁게 느껴지는 효과
     // - 실제 F1: 고속에서 핸들을 급하게 돌리기 어려움 (안전성)
-    const steerInertia = 1 / (1 + Math.abs(car.speed) * 0.025);
+    // - 저속에서는 빠른 반응, 고속에서는 무거운 핸들감 유지
+    const steerInertia = 1 / (1 + Math.abs(car.speed) * 0.020);
+    
+    // 조향각이 반대 방향으로 바뀔 때 감지
+    // - 현재 조향각과 목표 조향각의 부호가 다르면 반대 방향 전환
+    const isReversingDirection = (car.steerAngle * targetSteer) < 0 && Math.abs(car.steerAngle) > 0.01;
     
     // 실제 조향각 업데이트 (부드러운 보간)
     // - 입력이 있을 때: STEERING_RESPONSE_SPEED 사용 (무거운 핸들)
     // - 입력이 없을 때: STEERING_CENTERING_SPEED 사용 (빠른 센터링)
+    // - 반대 방향 전환 시: 더 빠른 반응 속도 사용 (1.5배)
     const isInputActive = input.left || input.right;
-    const steeringSpeed = isInputActive 
+    let steeringSpeed = isInputActive 
       ? this.STEERING_RESPONSE_SPEED 
       : this.STEERING_CENTERING_SPEED;
+    
+    // 반대 방향으로 바뀔 때 더 빠른 반응
+    if (isReversingDirection && isInputActive) {
+      steeringSpeed *= 3.5; // 반대 방향 전환 시 3.5배 빠르게
+    }
     
     car.steerAngle +=
       (targetSteer - car.steerAngle) *
@@ -537,44 +550,48 @@ export class GameService {
     // 4️⃣ F1 타이어 그립 & 에어로 다운포스
     // =========================
     const speedAbs = Math.abs(pixelsPerSecond);
-    
+
     // 다운포스 계산 (속도의 제곱에 비례)
     // - 실제 F1: 고속 코너(200km/h+)에서 차체가 지면에 강하게 눌림
     // - 저속(50km/h): 거의 다운포스 없음 → 기본 그립만 사용
     // - 고속(150km/h): 강력한 다운포스 → 횡방향 그립 대폭 증가
     const downforce = speedAbs * speedAbs * this.DOWNFORCE_COEFF;
-    
+
     // 총 그립 = 기본 타이어 그립 + 속도 의존 다운포스
     const totalGrip = this.BASE_LATERAL_GRIP + downforce;
-    
+
+    // [ADD] 고속 상태에서 조향각이 클 경우 그립 손실 (언더스티어)
+    // - 실제 F1: 속도를 줄이지 않으면 차가 바깥으로 밀려남
+    const steeringStress = Math.abs(car.steerAngle) * speedAbs * 0.015;
+    const effectiveGrip = Math.max(0.3, totalGrip - steeringStress);
+
     // 그립을 이용해 목표 속도로 수렴 (미끄러짐 제어)
     // - gripFactor가 클수록 차가 빠르게 목표 방향으로 정렬
     // - gripFactor가 작으면 미끄러지는 느낌 (드리프트)
-    // - 현재: 높은 BASE_LATERAL_GRIP(12.0)으로 미끄러짐 최소화
-    const gripFactor = Math.min(1, totalGrip * deltaTime);
-    
+    const gripFactor = Math.min(1, effectiveGrip * deltaTime);
+
     car.velocity.x += (targetVelX - car.velocity.x) * gripFactor;
     car.velocity.y += (targetVelY - car.velocity.y) * gripFactor;
+
   
     // =========================
     // 5️⃣ 차체 회전 (자전거 모델 운동학)
     // =========================
-    // 📐 자전거 모델 공식: ω = (v / L) × sin(δ)
-    //   - ω (omega): 차체 각속도 (rad/s)
-    //   - v: 차량 속도 (pixels/s)
-    //   - L: 휠베이스 (픽셀)
-    //   - δ (delta): 앞바퀴 조향각 (rad)
-    //
-    // 원리:
-    //   - 앞바퀴가 angle+δ 방향을 향하고, 뒷바퀴가 angle 방향을 향함
-    //   - 두 방향의 차이로 인해 차체가 회전
-    //   - 휠베이스가 길수록 회전 반경이 커짐 (덜 민첩)
-    //   - 속도가 빠를수록 같은 조향각에서 더 빠르게 회전
-    
+    // 📐 자전거 모델 공식: ω = (v / L) × tan(δ)
+    //   - ω: 차체 각속도 (rad/s)
+    //   - v: 차량 속도
+    //   - L: 휠베이스
+    //   - δ: 앞바퀴 조향각
+    // 
+    // 실제 F1: 고속에서 급회전이 안 되는 이유는 
+    // "조향각 제한"과 "그립 손실"로 구현 (위에서 이미 처리)
+    // 자전거 모델 자체는 물리적으로 정확하므로 그대로 유지
     let angularVelocity = 0;
     if (Math.abs(car.steerAngle) > 0.0001 && Math.abs(pixelsPerSecond) > 0.1) {
       const wheelBasePixels = this.WHEEL_BASE_METERS * this.PIXELS_PER_METER;
-      angularVelocity = (pixelsPerSecond / wheelBasePixels) * Math.sin(car.steerAngle);
+      
+      // 표준 자전거 모델 공식 (tan 사용)
+      angularVelocity = (pixelsPerSecond / wheelBasePixels) * Math.tan(car.steerAngle);
     }
     
     // 차체 각도 적용 (차가 실제로 회전)

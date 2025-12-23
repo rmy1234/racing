@@ -32,7 +32,7 @@ let GameService = class GameService {
         });
         return paths;
     })();
-    MAX_STEER_ANGLE = Math.PI / 6.5;
+    MAX_STEER_ANGLE = Math.PI / 7.2;
     WHEEL_BASE_METERS = 3.0;
     getCheckpointRadius(trackName) {
         if (trackName === 'basic-circuit') {
@@ -68,9 +68,9 @@ let GameService = class GameService {
             angle: defaultConfig.startLine.angle,
         };
     }
-    BASE_LATERAL_GRIP = 11.0;
-    DOWNFORCE_COEFF = 0.004;
-    STEERING_RESPONSE_SPEED = 3.5;
+    BASE_LATERAL_GRIP = 6.5;
+    DOWNFORCE_COEFF = 0.0022;
+    STEERING_RESPONSE_SPEED = 5.5;
     STEERING_CENTERING_SPEED = 50.0;
     createRoom(hostId, hostNickname, roomName, carSkin, trackId) {
         const roomId = this.generateRoomId();
@@ -285,13 +285,17 @@ let GameService = class GameService {
             targetSteer = -this.MAX_STEER_ANGLE;
         else if (input.right && !input.left)
             targetSteer = this.MAX_STEER_ANGLE;
-        const visualSpeedRatio = Math.min(1, Math.abs(car.speed) / (this.MAX_SPEED * 0.7));
-        targetSteer *= 0.65 + 0.30 * visualSpeedRatio;
-        const steerInertia = 1 / (1 + Math.abs(car.speed) * 0.025);
+        const speedRatio = Math.min(1, Math.abs(car.speed) / (this.MAX_SPEED * 0.7));
+        targetSteer *= 1.0 - speedRatio * 0.7;
+        const steerInertia = 1 / (1 + Math.abs(car.speed) * 0.020);
+        const isReversingDirection = (car.steerAngle * targetSteer) < 0 && Math.abs(car.steerAngle) > 0.01;
         const isInputActive = input.left || input.right;
-        const steeringSpeed = isInputActive
+        let steeringSpeed = isInputActive
             ? this.STEERING_RESPONSE_SPEED
             : this.STEERING_CENTERING_SPEED;
+        if (isReversingDirection && isInputActive) {
+            steeringSpeed *= 3.5;
+        }
         car.steerAngle +=
             (targetSteer - car.steerAngle) *
                 Math.min(1, steeringSpeed * steerInertia * deltaTime);
@@ -307,13 +311,15 @@ let GameService = class GameService {
         const speedAbs = Math.abs(pixelsPerSecond);
         const downforce = speedAbs * speedAbs * this.DOWNFORCE_COEFF;
         const totalGrip = this.BASE_LATERAL_GRIP + downforce;
-        const gripFactor = Math.min(1, totalGrip * deltaTime);
+        const steeringStress = Math.abs(car.steerAngle) * speedAbs * 0.015;
+        const effectiveGrip = Math.max(0.3, totalGrip - steeringStress);
+        const gripFactor = Math.min(1, effectiveGrip * deltaTime);
         car.velocity.x += (targetVelX - car.velocity.x) * gripFactor;
         car.velocity.y += (targetVelY - car.velocity.y) * gripFactor;
         let angularVelocity = 0;
         if (Math.abs(car.steerAngle) > 0.0001 && Math.abs(pixelsPerSecond) > 0.1) {
             const wheelBasePixels = this.WHEEL_BASE_METERS * this.PIXELS_PER_METER;
-            angularVelocity = (pixelsPerSecond / wheelBasePixels) * Math.sin(car.steerAngle);
+            angularVelocity = (pixelsPerSecond / wheelBasePixels) * Math.tan(car.steerAngle);
         }
         car.angle += angularVelocity * deltaTime;
         car.angularVelocity = angularVelocity;

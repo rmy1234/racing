@@ -118,29 +118,6 @@ ${editor.checkpoints.length > 0 ? editor.checkpoints.map(cp => `      { x: ${cp.
       width: ${trackWidth},
       angle: ${(editor.startLine?.angle || 0).toFixed(3)}
     },
-    
-    serverConfig: {
-      buildCenterPath: function() {
-        return [
-          ${pointsStr}
-        ];
-      },
-      
-      spawnPositions: [
-${editor.spawnPositions.length > 0 ? editor.spawnPositions.map(spawn => `        { x: ${spawn.x}, y: ${spawn.y} }`).join(',\n') : `        { x: ${editor.points[0]?.x || 0}, y: ${editor.points[0]?.y || 0} }`}
-      ],
-      
-      spawnAngle: ${(editor.spawnAngle || 0).toFixed(3)},
-      checkpoints: [
-${editor.checkpoints.length > 0 ? editor.checkpoints.map(cp => `        { x: ${cp.x}, y: ${cp.y}, angle: ${cp.angle.toFixed(3)} }`).join(',\n') : '        // 체크포인트를 추가하세요'}
-      ],
-      startLine: {
-        x: ${editor.startLine?.x || editor.points[0]?.x || 0},
-        y: ${editor.startLine?.y || editor.points[0]?.y || 0},
-        angle: ${(editor.startLine?.angle || 0).toFixed(3)}
-      },
-      trackWidth: ${trackWidth}
-    },
   
   // 트랙 경계 생성 (부드러운 경로 사용)
   getTrackBounds() {
@@ -331,7 +308,49 @@ if (typeof registerTrack === 'function') {
   registerTrack('${trackId}', ${trackId.replace(/-/g, '')});
 }`;
 
-  document.getElementById('codeOutput').value = code;
+  // 서버 설정 코드 생성 (track-configs.ts용)
+  const serverPointsStr = editor.points.map(p => `      { x: ${p.x}, y: ${p.y} }`).join(',\n');
+  const serverSpawnStr = editor.spawnPositions.length > 0 
+    ? editor.spawnPositions.map(spawn => `    { x: ${spawn.x}, y: ${spawn.y} }`).join(',\n') 
+    : `    { x: ${editor.points[0]?.x || 0}, y: ${editor.points[0]?.y || 0} }`;
+  const serverCheckpointsStr = editor.checkpoints.length > 0 
+    ? editor.checkpoints.map(cp => `    { x: ${cp.x}, y: ${cp.y}, angle: ${cp.angle.toFixed(3)} }`).join(',\n') 
+    : '    // 체크포인트를 추가하세요';
+  
+  const serverCode = `
+
+// ========================================
+// 서버 설정 코드 (src/game/tracks/track-configs.ts에 추가)
+// ========================================
+
+// 1. 아래 코드를 track-configs.ts의 trackServerConfigs 맵 위에 추가하세요:
+
+export const ${trackId.replace(/-/g, '')}ServerConfig: TrackServerConfig = {
+  buildCenterPath: function() {
+    return [
+${serverPointsStr}
+    ];
+  },
+  spawnPositions: [
+${serverSpawnStr}
+  ],
+  spawnAngle: ${(editor.spawnAngle || 0).toFixed(3)},
+  checkpoints: [
+${serverCheckpointsStr}
+  ],
+  startLine: {
+    x: ${editor.startLine?.x || editor.points[0]?.x || 0},
+    y: ${editor.startLine?.y || editor.points[0]?.y || 0},
+    angle: ${(editor.startLine?.angle || 0).toFixed(3)}
+  },
+  trackWidth: ${trackWidth}
+};
+
+// 2. trackServerConfigs 맵에 아래 줄을 추가하세요:
+//    ['${trackId}', ${trackId.replace(/-/g, '')}ServerConfig],
+`;
+
+  document.getElementById('codeOutput').value = code + serverCode;
 };
 
 // 코드 복사
